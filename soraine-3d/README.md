@@ -94,3 +94,5 @@ Flip the egg (F), Salt (S) and Blow (B). One self-contained file: it reads the w
 ## ISS scene (`js/scenes/orbit.js`)
 
 Drawn in code: the hull the stove stands on, a station behind it and the Earth below. An illustration, not a model of the real ISS.
+
+`js/space-hd.js` holds the 4096 x 2048 Earth picture; `js/scenes/orbit.js` adds it as a script only when the ISS scene is built, so start-up is not slowed.

@@ -65,32 +65,50 @@
     // The fire: the centre of the story. Tony's flame (kitchen/scene.js): a cone that morphs toward a sphere as buoyancy
     // weakens and shifts from yellow to blue. Two layers: a solid coloured body (reads against light backgrounds) and a bright glowing core.
     var fireU = { uTime: { value: 0 }, uBlue: { value: 0 }, uSphere: { value: 0 }, uFlicker: { value: 1 } };
+    var NOISE = 'float hsh(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }\n' +
+      'float vnoise(vec3 x){ vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);\n' +
+      '  return mix(mix(mix(hsh(i), hsh(i + vec3(1,0,0)), f.x), mix(hsh(i + vec3(0,1,0)), hsh(i + vec3(1,1,0)), f.x), f.y),\n' +
+      '             mix(mix(hsh(i + vec3(0,0,1)), hsh(i + vec3(1,0,1)), f.x), mix(hsh(i + vec3(0,1,1)), hsh(i + vec3(1,1,1)), f.x), f.y), f.z); }\n';
+    // Each layer: turbulence that scrolls upward licks the surface (less of it as the flame rounds off); the colour runs from a
+    // hot pale core through orange to a dark red edge, with a blue zone at the base; a round flame reads as a thin blue shell.
     function fireMat(additive, gain, opacity) {
       var mt = new T.MeshBasicMaterial({ color: 0xffa23a, transparent: true, opacity: opacity, depthWrite: false, side: T.DoubleSide, blending: additive ? T.AdditiveBlending : T.NormalBlending, toneMapped: false });
       mt.onBeforeCompile = function (s) {
-        s.uniforms.uTime = fireU.uTime; s.uniforms.uBlue = fireU.uBlue; s.uniforms.uSphere = fireU.uSphere; s.uniforms.uFlicker = fireU.uFlicker; s.uniforms.uGain = { value: gain };
-        s.vertexShader = 'uniform float uTime, uSphere, uFlicker; varying float vH;\n' + s.vertexShader.replace('#include <begin_vertex>', [
+        s.uniforms.uTime = fireU.uTime; s.uniforms.uBlue = fireU.uBlue; s.uniforms.uSphere = fireU.uSphere; s.uniforms.uFlicker = fireU.uFlicker; s.uniforms.uGain = { value: gain }; s.uniforms.uRound = { value: additive ? 0.22 : 1 };
+        s.vertexShader = 'uniform float uTime, uSphere, uFlicker; varying float vH; varying float vF; varying vec3 vP;\n' + NOISE + s.vertexShader.replace('#include <begin_vertex>', [
           'vec3 transformed = position;',
           'float h = clamp(transformed.y / 0.2, 0., 1.); vH = h;',
-          'vec3 toS = normalize(vec3(transformed.x, transformed.y - 0.075, transformed.z) + 1e-4) * 0.075 + vec3(0., 0.075, 0.);   // sphere of radius 0.075 sitting on the burner',
+          'vec3 sN = normalize(vec3(transformed.x, transformed.y - 0.075, transformed.z) + 1e-4);',
+          'vec3 toS = sN * 0.075 + vec3(0., 0.075, 0.);                                       // sphere of radius 0.075 sitting on the burner',
+          'transformed.xz *= 1.0 + 0.55 * sin(h * 3.1416) * (1. - h * 0.35);                  // belly: a teardrop, not a straight cone',
           'transformed = mix(transformed, toS, uSphere);',
-          'float f = sin(uTime * 18. + h * 9.) * 0.012 + sin(uTime * 7.3 + h * 4.) * 0.01;                                         // flicker: sideways sway growing with height',
-          'transformed.x += f * h * uFlicker; transformed.z += cos(uTime * 14. + h * 6.) * 0.01 * h * uFlicker;',
-          'transformed.y *= 1.0 + 0.08 * sin(uTime * 11.) * uFlicker * (1. - uSphere);'].join('\n'));
-        s.fragmentShader = 'uniform float uBlue, uSphere, uGain; varying float vH;\n' + s.fragmentShader.replace('#include <color_fragment>', [
-          'vec3 yellow = mix(vec3(1.0, 0.36, 0.02), vec3(1.0, 0.74, 0.16), vH);',
-          'vec3 blue = mix(vec3(0.04, 0.2, 1.0), vec3(0.2, 0.55, 1.0), vH);',
-          'vec3 fc = mix(yellow, blue, uBlue); fc = clamp(mix(vec3(dot(fc, vec3(0.33))), fc, 2.4), 0., 1.) * 0.92;   // keep the in-between flames vivid, not grey',
-          'diffuseColor.rgb = fc * uGain;',
-          'float edge = 1.0 - smoothstep(0.0, 1.0, vH);',
-          'diffuseColor.a *= mix(0.35 + 0.65 * edge, 0.75, uSphere);'].join('\n'));
+          'float turb = uFlicker * (1. - 0.75 * uSphere);',
+          'float n1 = vnoise(vec3(position.xz * 22., h * 5. - uTime * 3.2)) - 0.5, n2 = vnoise(vec3(position.xz * 48. + 7., h * 11. - uTime * 5.5)) - 0.5;',
+          'transformed.xz *= 1.0 + (n1 * 0.7 + n2 * 0.3) * h * turb;                          // licks',
+          'transformed.x += (vnoise(vec3(uTime * 1.7, h * 2.2, 3.)) - 0.5) * 0.07 * h * h * turb; transformed.z += (vnoise(vec3(7., h * 2.2, uTime * 1.5)) - 0.5) * 0.07 * h * h * turb;   // the tip wanders',
+          'transformed.y *= 1.0 + (vnoise(vec3(uTime * 4.3, 1., 5.)) - 0.5) * 0.3 * turb;',
+          'vec3 nn = normalize(mix(vec3(normal.x, 0.25, normal.z), sN, uSphere)); vec4 mvF = modelViewMatrix * vec4(transformed, 1.);',
+          'vF = abs(dot(normalize(normalMatrix * nn), normalize(-mvF.xyz))); vP = position;'].join('\n'));
+        s.fragmentShader = 'uniform float uBlue, uSphere, uGain, uTime, uRound; varying float vH; varying float vF; varying vec3 vP;\n' + NOISE + s.fragmentShader.replace('#include <color_fragment>', [
+          'float fn = vnoise(vec3(vP.xz * 30., vH * 7. - uTime * 3.6));',
+          'float heat = clamp(pow(vF, 1.3) * (1.15 - vH * 0.7) + (fn - 0.5) * 0.25, 0., 1.);',
+          'vec3 warm = mix(vec3(0.75, 0.08, 0.0), vec3(1.0, 0.42, 0.02), smoothstep(0.0, 0.4, heat)); warm = mix(warm, vec3(1.0, 0.8, 0.22), smoothstep(0.35, 0.75, heat)); warm = mix(warm, vec3(1.0, 0.96, 0.78), smoothstep(0.75, 1.0, heat));',
+          'warm = mix(warm, vec3(0.12, 0.38, 1.0), (1. - smoothstep(0.02, 0.2, vH)) * 0.85);                      // blue where gas and air first meet',
+          'vec3 cool = mix(vec3(0.03, 0.14, 0.9), vec3(0.12, 0.45, 1.0), smoothstep(0.0, 0.5, heat)); cool = mix(cool, vec3(0.6, 0.86, 1.0), smoothstep(0.6, 1.0, heat));',
+          'float shell = pow(1. - vF, 1.6);                                                                       // a round flame is brightest at its edge',
+          'cool = mix(cool, vec3(0.02, 0.2, 0.95) + shell * vec3(0.08, 0.34, 0.05), uSphere);',
+          'vec3 fc = mix(warm, cool, smoothstep(0.05, 0.95, uBlue)); fc = clamp(mix(vec3(dot(fc, vec3(0.33))), fc, 1.5), 0., 1.);',
+          'diffuseColor.rgb = fc * uGain * mix(1., uRound, uSphere);',
+          'float body = smoothstep(0.0, 0.4, vF) * (1. - smoothstep(0.5, 1.0, vH + (fn - 0.5) * 0.45));',
+          'diffuseColor.a *= mix(body, 0.34 + 0.6 * shell, uSphere);'].join('\n'));
       };
       return mt;
     }
-    var fireGeo = new T.ConeGeometry(0.075, 0.2, 32, 10, true); fireGeo.translate(0, 0.1, 0);
+    var fireGeo = new T.ConeGeometry(0.075, 0.2, 56, 28, true); fireGeo.translate(0, 0.1, 0);
     var fire = group(burner.x, burner.y + 0.005, burner.z, scene, 'fire');
-    var fireBody = put(fireGeo, fireMat(false, 0.9, 0.85), 0, 0, 0, fire), fireCore = put(fireGeo, fireMat(true, 0.55, 0.8), 0, 0, 0, fire); fireCore.scale.set(0.55, 0.68, 0.55);
-    fireBody.userData.noCast = fireCore.userData.noCast = true; fireBody.renderOrder = 3; fireCore.renderOrder = 4;
+    var fireGlow = put(fireGeo, fireMat(true, 0.35, 0.5), 0, 0, 0, fire), fireBody = put(fireGeo, fireMat(false, 1.0, 0.92), 0, 0, 0, fire), fireCore = put(fireGeo, fireMat(true, 0.6, 0.85), 0, 0, 0, fire);
+    fireGlow.scale.set(1.3, 1.12, 1.3); fireCore.scale.set(0.5, 0.62, 0.5);
+    fireGlow.userData.noCast = fireBody.userData.noCast = fireCore.userData.noCast = true; fireGlow.renderOrder = 2; fireBody.renderOrder = 3; fireCore.renderOrder = 4;
     flameLight = new T.PointLight(0x6aa8ff, 0.6, 2.2); flameLight.position.set(burner.x, burner.y + 0.1, burner.z + 0.15); scene.add(flameLight);
 
     flameHalo = halo(0x4a8cff, 0.5, burner.x, burner.y + 0.02, burner.z, scene, 0.7);
