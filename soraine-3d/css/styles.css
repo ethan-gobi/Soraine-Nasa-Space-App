@@ -155,3 +155,6 @@ button.face:focus-visible { outline: 2px solid #5aa8ff; outline-offset: -4px; }
 .facts dt { color: rgba(244,241,232,.78); }
 .is-inspect .side, .is-cut .side, .is-about .side { display: none; }
 @media (max-width: 760px) { .side { top: calc(max(var(--pad), env(safe-area-inset-top)) + 40px); width: min(13rem, 58vw); } .card { bottom: 60px; } }
+
+/* Tony's review: the title, line and next-world button in the bottom-left repeat the world bar, so they only show on the opening top-down view */
+.stage:not(.is-top) .hero { display: none; }
