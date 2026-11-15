@@ -85,7 +85,7 @@
   requestAnimationFrame(function () { stage.classList.add('is-on'); });
 
   // The page opens looking straight down on the pan. The first click pulls back to the whole scene; after that the button moves on.
-  function setTop(on) { SoraineScene.topView(on); stage.classList.toggle('is-top', !!on); $('go').textContent = on ? C.BEGIN : STOPS[current].go; var b = $('lab-top'); if (b) b.textContent = on ? 'Back to the scene view' : 'Top view of the pan'; }
+  function setTop(on) { SoraineScene.topView(on, on ? 'pan' : null); stage.classList.toggle('is-top', !!on); $('go').textContent = on ? C.BEGIN : STOPS[current].go; var b = $('lab-top'); if (b) b.textContent = on ? 'Back to the scene view' : 'Top view of the pan'; }
   if (ok && location.hash.slice(1) && location.hash.slice(1) !== C.first) setTop(false);
   stage.classList.toggle('is-top', !!(SoraineScene.isTop && SoraineScene.isTop()));
   $('go').addEventListener('click', function () { if (SoraineScene.isTop()) { setTop(false); return; } goTo(STOPS[current].next); });

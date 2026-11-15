@@ -17,7 +17,7 @@
   function scenario(stop) { var slug = MAP[stop] || stop; for (var i = 0; i < DATA.length; i++) if (DATA[i].slug === slug) return DATA[i]; return null; }
   K.g = function (stop) { var s = scenario(stop); return s ? s.g : G_EARTH; };
 
-  var stop = 'earth', valve = 1, flare = 0, cooked = 0, fl = { height: 1, width: 1, flicker: 1, blue: 0, sphere: 0 }, target = { height: 1, width: 1, flicker: 1, blue: 0, sphere: 0 }, baseLight = null, blueLight = new T.Color(0.45, 0.6, 1);
+  var stop = 'earth', valve = 1, flare = 0, cooked = 0, fl = { height: 1, width: 1, flicker: 1, blue: 0, sphere: 0 }, target = { height: 1, width: 1, flicker: 1, blue: 0, sphere: 0 }, warmLight = new T.Color(1, 0.63, 0.25), blueLight = new T.Color(0.45, 0.6, 1), fire = { sphere: 0, blue: 0 };
   var drop = null, spoon, puffs = [], last = 0, parts, burner, $ = function (id) { return document.getElementById(id); };
 
   K.props.push(function (E) {
@@ -39,10 +39,16 @@
         if (!on) parts.jets.visible = false;
         parts.jets.scale.set(fl.width * (0.8 + 0.2 * size) * (1 + 0.25 * flare), Math.max(0.01, fl.height * size * burst * (1 + jit)), fl.width * (0.8 + 0.2 * size) * (1 + 0.25 * flare));
       }
-      // Tony's cone-to-sphere morph and blue shift: as buoyancy weakens the flame rounds off and its light turns bluer
-      if (parts.jets && fl.sphere > 0.01 && !f.free) { parts.jets.scale.y *= 1 - 0.5 * fl.sphere; parts.jets.scale.x *= 1 + 0.3 * fl.sphere; parts.jets.scale.z *= 1 + 0.3 * fl.sphere; }
-      if (parts.ball && !f.free && !f.focus) { var sp = on ? Math.max(0, fl.sphere - 0.05) : 0; parts.ball.visible = sp > 0.01; if (sp > 0.01) parts.ball.scale.setScalar(0.25 + 0.6 * sp * size); }
-      if (parts.light) { if (!baseLight) baseLight = parts.light.color.clone(); parts.light.color.copy(baseLight).lerp(blueLight, fl.blue * 0.6); }
+      // The fire itself: Tony's cone-to-sphere morph and yellow-to-blue shift, sized by the valve and the ignition flare
+      if (parts.fire) {
+        var U = parts.fire.uniforms, sph = f.free ? 1 : fl.sphere, blu = f.free ? 1 : fl.blue; fire.sphere += (sph - fire.sphere) * k; fire.blue += (blu - fire.blue) * k;
+        U.uTime.value = f.still ? 0 : t; U.uSphere.value = fire.sphere; U.uBlue.value = fire.blue; U.uFlicker.value = fl.flicker;
+        parts.fire.group.visible = on && !(f.focus && false); var fw = fl.width * (0.7 + 0.3 * size) * (1 + 0.2 * flare), fh = fl.height * size * burst; fh += (fw * 0.78 - fh) * fire.sphere * fire.sphere;   // a full sphere is as tall as it is wide
+        parts.fire.group.scale.set(fw, Math.max(0.01, fh), fw);
+        if (parts.ball) parts.ball.visible = false;
+        if (parts.light) { parts.light.color.copy(warmLight).lerp(blueLight, fire.blue); parts.light.intensity = (1.5 + (f.still ? 0 : 0.5 * Math.sin(t * 17) * fl.flicker + 0.25 * Math.sin(t * 5.1) * fl.flicker)) * (0.45 + 0.55 * fl.height); parts.light.distance = 3.2; }
+        if (parts.halo) parts.halo.material.color.copy(warmLight).lerp(blueLight, fire.blue);
+      }
       if (parts.light) parts.light.intensity *= (on ? size * burst : 0);
       if (parts.halo) { parts.halo.material.opacity *= (on ? 0.3 + 0.7 * size : 0); parts.halo.scale.setScalar(0.5 * (0.6 + 0.4 * size) * fl.width * (1 + 0.6 * flare)); }
 

@@ -14,8 +14,9 @@
     // ---- front and centre: the gas stove, with its hood ----
     stove = group(0.3, 0, -2.02, scene, 'stove');
     rbox(0.92, 0.86, 0.68, 0.06, cream, 0, 0.44, 0, stove);
-    rbox(0.95, 0.05, 0.7, 0.022, creamDark, 0, 0.885, 0, stove);
-    rbox(0.92, 0.2, 0.07, 0.03, cream, 0, 1.0, -0.3, stove);
+    var hob = std(0x08090b, 0.85, 0.0);                         // dark enamel hob and splashback: a quiet backdrop, so the fire is what you look at
+    rbox(0.95, 0.05, 0.7, 0.022, hob, 0, 0.885, 0, stove);
+    rbox(0.92, 0.2, 0.07, 0.03, hob, 0, 1.0, -0.3, stove);
     rbox(0.7, 0.4, 0.04, 0.035, creamDark, 0, 0.32, 0.335, stove); rbox(0.46, 0.18, 0.02, 0.02, new T.MeshStandardMaterial({ color: 0x3a2412, roughness: 0.2, emissive: 0xff8a2a, emissiveIntensity: 0.55 }), 0, 0.33, 0.357, stove);   // oven window, lit from inside
     var bar = tube(0.017, 0.017, 0.62, chrome, 0, 0.58, 0.385, stove); bar.rotation.z = Math.PI / 2;
     [-0.27, 0.27].forEach(function (x) { tube(0.012, 0.012, 0.05, chrome, x, 0.58, 0.36, stove).rotation.x = Math.PI / 2; });
@@ -36,17 +37,20 @@
       candles.push({ flame: fl, halo: hl, light: cl });
     });
     [[-0.38, 0.28], [0.38, 0.28], [-0.38, -0.28], [0.38, -0.28]].forEach(function (p) { tube(0.035, 0.028, 0.06, creamDark, p[0], 0.01, p[1], stove); });
-    floater(stove, new T.Vector3(0, 0.12, 0.2), new T.Vector3(0.012, 0.03, 0.008));
+    // the stove stays put in every world, free fall included: the fire on its burner is the fixed centre of the story
 
 
     // ---- pan, egg, flame ----
     stove.updateMatrixWorld(true);
     var burner = stove.localToWorld(BURNER.clone());
-    var pan = group(burner.x, burner.y + 0.035, burner.z, scene, 'pan');
+    var LIFT = 0.2;                                             // the pan stands this far above the burner, on a trivet, so the flame is fully visible
+    for (i = 0; i < 4; i++) { var ta = i * Math.PI / 2 + Math.PI / 4; tube(0.006, 0.006, LIFT + 0.02, iron, BURNER.x + Math.cos(ta) * 0.19, BURNER.y + (LIFT + 0.02) / 2 - 0.01, BURNER.z + Math.sin(ta) * 0.19, stove); }
+    var ring = put(new T.TorusGeometry(0.19, 0.006, 8, 40), iron, BURNER.x, BURNER.y + LIFT + 0.005, BURNER.z, stove); ring.rotation.x = Math.PI / 2;
+    var pan = group(burner.x, burner.y + 0.035 + LIFT, burner.z, scene, 'pan');
     tube(0.22, 0.17, 0.06, iron, 0, 0, 0, pan); tube(0.2, 0.2, 0.006, std(0x2a2b2f, 0.45, 0.2), 0, 0.028, 0, pan);
     var handle = rbox(0.32, 0.026, 0.05, 0.012, iron, 0.33, 0.03, 0.12, pan); handle.rotation.y = -0.35;
     floater(pan, new T.Vector3(0.35, 0.45, 0.5), new T.Vector3(0.1, 0.16, 0.06));
-    var egg = group(burner.x, burner.y + 0.072, burner.z, scene, 'egg');
+    var egg = group(burner.x, burner.y + 0.072 + LIFT, burner.z, scene, 'egg');
     var eggWhite = std(0xfbf7ec, 0.5);
     tube(0.13, 0.135, 0.014, eggWhite, 0, 0, 0, egg); tube(0.075, 0.08, 0.014, eggWhite, 0.09, 0, 0.06, egg); tube(0.06, 0.065, 0.014, eggWhite, -0.08, 0, -0.07, egg);
     var yolk = put(new T.SphereGeometry(0.05, 28, 18), std(0xf5a623, 0.35), 0.01, 0.012, 0, egg); yolk.scale.y = 0.6;
@@ -57,11 +61,41 @@
     for (i = 0; i < 14; i++) put(new T.ConeGeometry(0.014, 0.05, 12), glow(0x4a94ff), Math.cos(i * 0.449) * 0.085, 0, Math.sin(i * 0.449) * 0.085, flameJets);
     for (i = 0; i < 7; i++) put(new T.ConeGeometry(0.008, 0.026, 10), glow(0xbfe0ff), Math.cos(i * 0.898) * 0.085, 0.004, Math.sin(i * 0.898) * 0.085, flameJets);
     flameBall = put(new T.SphereGeometry(0.075, 32, 20), glow(0x5aa8ff), 0, 0, 0, scene); flameBall.visible = false;
+
+    // The fire: the centre of the story. Tony's flame (kitchen/scene.js): a cone that morphs toward a sphere as buoyancy
+    // weakens and shifts from yellow to blue. Two layers: a solid coloured body (reads against light backgrounds) and a bright glowing core.
+    var fireU = { uTime: { value: 0 }, uBlue: { value: 0 }, uSphere: { value: 0 }, uFlicker: { value: 1 } };
+    function fireMat(additive, gain, opacity) {
+      var mt = new T.MeshBasicMaterial({ color: 0xffa23a, transparent: true, opacity: opacity, depthWrite: false, side: T.DoubleSide, blending: additive ? T.AdditiveBlending : T.NormalBlending, toneMapped: false });
+      mt.onBeforeCompile = function (s) {
+        s.uniforms.uTime = fireU.uTime; s.uniforms.uBlue = fireU.uBlue; s.uniforms.uSphere = fireU.uSphere; s.uniforms.uFlicker = fireU.uFlicker; s.uniforms.uGain = { value: gain };
+        s.vertexShader = 'uniform float uTime, uSphere, uFlicker; varying float vH;\n' + s.vertexShader.replace('#include <begin_vertex>', [
+          'vec3 transformed = position;',
+          'float h = clamp(transformed.y / 0.2, 0., 1.); vH = h;',
+          'vec3 toS = normalize(vec3(transformed.x, transformed.y - 0.075, transformed.z) + 1e-4) * 0.075 + vec3(0., 0.075, 0.);   // sphere of radius 0.075 sitting on the burner',
+          'transformed = mix(transformed, toS, uSphere);',
+          'float f = sin(uTime * 18. + h * 9.) * 0.012 + sin(uTime * 7.3 + h * 4.) * 0.01;                                         // flicker: sideways sway growing with height',
+          'transformed.x += f * h * uFlicker; transformed.z += cos(uTime * 14. + h * 6.) * 0.01 * h * uFlicker;',
+          'transformed.y *= 1.0 + 0.08 * sin(uTime * 11.) * uFlicker * (1. - uSphere);'].join('\n'));
+        s.fragmentShader = 'uniform float uBlue, uSphere, uGain; varying float vH;\n' + s.fragmentShader.replace('#include <color_fragment>', [
+          'vec3 yellow = mix(vec3(1.0, 0.36, 0.02), vec3(1.0, 0.74, 0.16), vH);',
+          'vec3 blue = mix(vec3(0.04, 0.2, 1.0), vec3(0.2, 0.55, 1.0), vH);',
+          'vec3 fc = mix(yellow, blue, uBlue); fc = clamp(mix(vec3(dot(fc, vec3(0.33))), fc, 2.4), 0., 1.) * 0.92;   // keep the in-between flames vivid, not grey',
+          'diffuseColor.rgb = fc * uGain;',
+          'float edge = 1.0 - smoothstep(0.0, 1.0, vH);',
+          'diffuseColor.a *= mix(0.35 + 0.65 * edge, 0.75, uSphere);'].join('\n'));
+      };
+      return mt;
+    }
+    var fireGeo = new T.ConeGeometry(0.075, 0.2, 32, 10, true); fireGeo.translate(0, 0.1, 0);
+    var fire = group(burner.x, burner.y + 0.005, burner.z, scene, 'fire');
+    var fireBody = put(fireGeo, fireMat(false, 0.9, 0.85), 0, 0, 0, fire), fireCore = put(fireGeo, fireMat(true, 0.55, 0.8), 0, 0, 0, fire); fireCore.scale.set(0.55, 0.68, 0.55);
+    fireBody.userData.noCast = fireCore.userData.noCast = true; fireBody.renderOrder = 3; fireCore.renderOrder = 4;
     flameLight = new T.PointLight(0x6aa8ff, 0.6, 2.2); flameLight.position.set(burner.x, burner.y + 0.1, burner.z + 0.15); scene.add(flameLight);
 
     flameHalo = halo(0x4a8cff, 0.5, burner.x, burner.y + 0.02, burner.z, scene, 0.7);
     burnerWorld.copy(burner);
-    E.parts.jets = flameJets; E.parts.light = flameLight; E.parts.halo = flameHalo; E.parts.ball = flameBall;
+    E.parts.jets = flameJets; E.parts.light = flameLight; E.parts.halo = flameHalo; E.parts.ball = flameBall; E.parts.fire = { group: fire, uniforms: fireU };
 
     // ---- gas canister: this is a gas stove, so here is its fuel ----
     var canister = group(-0.29, 0, -1.78, scene, 'canister');

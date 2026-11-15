@@ -34,6 +34,7 @@
     group: function (id) { return groups[id]; }
   };
   var rig = null, dof = 0, dofGoal = 0;                           // Tony's page views: a named camera rig, and depth-of-field blur for the detail page
+  var topMode = 'fire';                                         // which special view `top` means: the opening close shot of the fire, or the top-down view of the pan
   var top = true;                                               // the top-down view over the pan (the opening shot)
   // Tony's scan wave: see scanCapture / scanFire below
   var wave = { active: false, t: 0, R: -1, v0: 4, accel: 44, cubic: 120, maxR: 220, swept: false, tSweep: 0 }, rt = null, oldCanvas = null, oldTex = null, quad = null, qScene = null, qCam = null, waveDone = null, bufSize = new T.Vector2();
@@ -72,7 +73,9 @@
     camera.fov = camera.aspect < 0.8 ? 62 : (camera.aspect < 1.4 ? 54 : 46);
     camera.updateProjectionMatrix(); shadowDirty = 4; sizeWave(); draw(performance.now());
   }
-  function overview() { var c = def().camera(camera.aspect); goalPos.fromArray(c.pos); goalLook.fromArray(c.look); }
+  // The resting view puts the fire in the middle of the frame (Tony: the flame is the main character, not the stove).
+  function overview() { goalPos.copy(E.burner).add(camera.aspect < 0.8 ? tmp.set(0.3, 0.5, 2.25) : tmp.set(0.5, 0.36, 1.45)); goalLook.copy(E.burner); goalLook.y += 0.13; }
+  function wide() { var c = def().camera(camera.aspect); goalPos.fromArray(c.pos); goalLook.fromArray(c.look); }   // each scene's own wide establishing view
 
   function draw(now) {
     var sc = def(), free = !!sc.freeFall, t = still ? 6 : now / 1000;
@@ -92,9 +95,10 @@
       goalPos.set(focusCenter.x + orb.cd * Math.sin(orb.cph) * Math.sin(orb.cth), focusCenter.y + orb.cd * Math.cos(orb.cph), focusCenter.z + orb.cd * Math.sin(orb.cph) * Math.cos(orb.cth));
       camPos.copy(goalPos);
     }
-    else if (rig === 'detail') { goalPos.copy(E.burner).add(tmp.set(0.37, 0.26, 0.55)); goalLook.copy(E.burner); sway *= 0.4; }   // close on the pan (Tony's detail page)
-    else if (rig === 'about') { goalPos.set(-1.6, 1.5, 1.9); goalLook.set(0.9, 0.8, -1.8); sway *= 0.4; }                         // stepped back to one side (Tony's about page)
-    else if (top) { goalPos.copy(E.burner).add(tmp.set(0, 1.08, 0.03)); goalLook.copy(E.burner); sway = 0; }   // straight down on the pan
+    else if (rig === 'detail') { goalPos.copy(E.burner).add(tmp.set(0.26, 0.14, 0.5)); goalLook.copy(E.burner); goalLook.y += 0.1; sway *= 0.3; }   // close on the fire (Tony's detail page)
+    else if (rig === 'about') { wide(); sway *= 0.4; }                                                                                              // the whole scene (Tony's about page)
+    else if (top && topMode === 'pan') { goalPos.copy(E.burner).add(tmp.set(0, 1.25, 0.03)); goalLook.copy(E.burner); sway = 0; }                   // straight down on the pan
+    else if (top) { goalPos.copy(E.burner).add(tmp.set(0.14, 0.1, 0.52)); goalLook.copy(E.burner); goalLook.y += 0.1; sway = 0; }                   // opening shot: close on the fire
     else overview();
     var ease = still ? 1 : 1 - Math.exp(-dt * (view === 'inspect' ? 5 : 2.2));
     camPos.lerp(goalPos, ease); camLook.lerp(goalLook, ease);
@@ -230,7 +234,7 @@
       canvas.addEventListener('webglcontextlost', function (ev) { ev.preventDefault(); window.dispatchEvent(new CustomEvent('soraine:error', { detail: 'The graphics card dropped the 3D view (out of graphics memory). Reload the page.' })); });
       camera.aspect = window.innerWidth / window.innerHeight; overview();
       if (still) { camPos.copy(goalPos); camLook.copy(goalLook); view = 'overview'; }
-      else { camPos.copy(E.burner).add(tmp.set(0, 1.08, 0.03)); camLook.copy(E.burner); view = 'overview'; }   // open looking straight down on the pan
+      else { camPos.copy(E.burner).add(tmp.set(0.14, 0.1, 0.52)); camLook.copy(E.burner); camLook.y += 0.1; view = 'overview'; }   // open close on the fire
       resize();
       window.addEventListener('resize', resize);
       requestAnimationFrame(loop);
@@ -238,7 +242,7 @@
     setState: setState,
     camera: function () { return camera; },
     /* the top-down view over the pan: on or off */
-    topView: function (on) { top = !!on; return top; },
+    topView: function (on, mode) { top = !!on; if (mode) topMode = mode; return top; },
     /* Tony's page views: 'detail' (close on the pan, background blurred), 'about' (stepped back), or null for the scene's own view */
     setRig: function (name) { rig = name || null; dofGoal = rig === 'detail' ? 1 : 0; },
     isTop: function () { return top; },
@@ -252,7 +256,7 @@
     },
     /* Scan transition, step 2: after the scene has changed, send the front out from the stove flame. done() runs when it has passed. */
     scanFire: function (done) {
-      if (!rig) { overview(); if (top) { goalPos.copy(E.burner).add(tmp.set(0, 1.08, 0.03)); goalLook.copy(E.burner); } camPos.copy(goalPos); camLook.copy(goalLook); }
+      if (!rig && !top) { overview(); camPos.copy(goalPos); camLook.copy(goalLook); }
       wave.active = true; wave.t = 0; wave.R = 0.001; wave.swept = false; waveDone = done || null;
     },
     scenes: function () { return Object.keys(K.scenes); },

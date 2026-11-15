@@ -82,3 +82,7 @@ Only the kitchen is built when the page opens. The Moon and Mars are built quiet
 - Observe / Detail / About buttons at the bottom (left and right arrow keys also step through them). Detail moves the camera close on the pan with the background blurred and shows the current world's facts with their source labels. About steps back and explains the project.
 - Code: `setPage` in `js/physics.js`; camera rigs and the blur in `js/engine.js` (`setRig`, `renderWave`).
 - World buttons show each world's gravity from `js/physics-data.js`.
+
+## The flame is the main character
+
+Tony's review asked for the fire, not the stove, to be the centre. `js/props.js` builds one large flame (group `fire`, two layers of his cone-to-sphere shader) under a pan raised on a trivet (`LIFT`). `js/physics.js` sizes and colours it each frame from the world's `flame` numbers in `js/physics-data.js` (marked schematic). The cameras in `js/engine.js` (`overview`, detail and the opening shot) all aim at `E.burner`. To restyle the flame, edit `fireMat` in `js/props.js`; to change how it responds to a world, edit the fire block in `js/physics.js`.

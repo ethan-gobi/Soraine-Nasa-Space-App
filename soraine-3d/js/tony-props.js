@@ -49,7 +49,7 @@
     function stat(shape, x, y, z) { var b = new C.Body({ mass: 0, type: C.Body.STATIC }); b.addShape(shape); b.position.set(x, y, z); w.addBody(b); return b; }
     stat(new C.Box(new C.Vec3(0.475, TOP / 2, 0.35)), 0.3, TOP / 2, -2.02);
     stat(new C.Box(new C.Vec3(0.46, 0.1, 0.035)), 0.3, 1.0, -2.32);
-    stat(new C.Cylinder(0.17, 0.17, 0.075, 16), E.burner.x, TOP + 0.0375, E.burner.z);
+    stat(new C.Cylinder(0.2, 0.2, 0.075, 16), E.burner.x, TOP + 0.0375 + 0.2, E.burner.z);   // the pan, up on its trivet
     stat(new C.Cylinder(0.14, 0.14, 0.6, 16), -0.29, 0.3, -1.78);
     var ground = new C.Body({ mass: 0, type: C.Body.STATIC, shape: new C.Plane() }); ground.quaternion.setFromEuler(-Math.PI / 2, 0, 0); w.addBody(ground);
 
