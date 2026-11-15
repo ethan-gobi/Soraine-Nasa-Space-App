@@ -18,7 +18,10 @@
 (function () {
   var T = THREE, K = SoraineKit, rand = K.rand;
 
-  function hash(i, j) { var n = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return n - Math.floor(n); }
+  // lattice values for the noise, worked out once into a 256 x 256 table (the lookup is many times faster than a sine per call)
+  var HASH = new Float32Array(65536);
+  (function () { for (var j = 0; j < 256; j++) for (var i = 0; i < 256; i++) { var n = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; HASH[j * 256 + i] = n - Math.floor(n); } })();
+  function hash(i, j) { return HASH[((j & 255) << 8) | (i & 255)]; }
   function noise(x, z) {                                        // smooth value noise, 0..1
     var i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j; fx = fx * fx * (3 - 2 * fx); fz = fz * fz * (3 - 2 * fz);
     var a = hash(i, j), b = hash(i + 1, j), c = hash(i, j + 1), d = hash(i + 1, j + 1);

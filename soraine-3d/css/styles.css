@@ -181,3 +181,6 @@ button.face:focus-visible { outline: 2px solid #5aa8ff; outline-offset: -4px; }
 .card .muted, .card dt, .lab .small { color: rgba(255,255,255,.8); }
 @media (prefers-reduced-transparency: reduce) { .worlds, .pages, .lab, .quick, .card { background: rgba(18,20,28,.8); backdrop-filter: none; -webkit-backdrop-filter: none; } }
 .lab, .lab *, .quick, .card { --dim: rgba(255,255,255,.86); }
+
+/* automatic quality (js/engine.js): on a struggling machine the panels drop their blur, which is costly over a live 3D canvas */
+.is-light .worlds, .is-light .pages, .is-light .lab, .is-light .quick, .is-light .card { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(14,16,22,.42); }

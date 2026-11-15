@@ -20,7 +20,7 @@
 (function () {
   var T = THREE, K = SoraineKit, objects = K.objects, floaters = K.floaters;
   var renderer, scene, camera, state = null, still = false, k = 0, lastT = 0, freeStart = 0;
-  var LITE = /[?&]lite\b/.test(location.search), shadowDirty = 4, ratio = LITE ? 1 : 1.5, frames = 0, slow = 0;
+  var HQ = /[?&]hq\b/.test(location.search), LITE = /[?&]lite\b/.test(location.search), shadowDirty = 4, ratio = LITE ? 1 : 1.5, frames = 0, slow = 0, level = LITE ? 2 : 0, acc = 0, tick = 0;
   var groups = {}, built = {}, hooks = [], lineMat, inspectKey, pickRoots = [];
   var view = 'intro', introUntil = 0, focus = null, saved = [], focusCenter = new T.Vector3(), tmp = new T.Vector3();
   var goalPos = new T.Vector3(), goalLook = new T.Vector3(), camPos = new T.Vector3(), camLook = new T.Vector3();
@@ -80,7 +80,13 @@
   function draw(now) {
     var sc = def(), free = !!sc.freeFall, t = still ? 6 : now / 1000;
     var dt = Math.min(0.1, (now - lastT) / 1000) || 0.016; lastT = now;
-    if (!still && ratio > 1) { frames++; if (dt > 0.03) slow++; if (frames === 120) { if (slow > 60) { ratio = 1; renderer.setPixelRatio(1); renderer.setSize(window.innerWidth, window.innerHeight, false); } frames = slow = 0; } }   // ease off on slow machines
+    // Automatic quality: every 60 frames look at the average frame time and step down if the machine is struggling.
+    // level 1: normal resolution. level 2: also no panel blur, shadows drawn once. level 3: also no shadows, 0.7 x resolution.
+    tick++;
+    if (!still && !HQ && level < 3 && !wave.active && now > 4000) {
+      frames++; acc += dt;
+      if (frames === 60) { if (acc / 60 > 0.027) setLevel(level + 1); frames = 0; acc = 0; }
+    }
     k += ((free ? 1 : 0) - k) * (still ? 1 : 1 - Math.exp(-dt * 1.8));
 
     // camera: opening close shot on the burner, then the scene's resting view, or a turnable close shot of one object
@@ -116,7 +122,7 @@
     for (var h = 0; h < hooks.length; h++) hooks[h](t, info);
     if (sc.update && !focus) sc.update(E, t, still);
 
-    if (shadowDirty > 0 || (k > 0.002 && k < 0.998) || (sc.liveShadows && !focus)) { renderer.shadowMap.needsUpdate = true; shadowDirty--; }   // shadows only redraw when something moved
+    if (shadowDirty > 0 || (k > 0.002 && k < 0.998) || (sc.liveShadows && !focus && level < 2 && tick % 2 === 0)) { renderer.shadowMap.needsUpdate = true; shadowDirty--; }   // shadows only redraw when something moved
     dof += ((focus ? 0 : dofGoal) - dof) * (still ? 1 : 1 - Math.exp(-dt * 3));
     if (wave.active || dof > 0.01) renderWave(dt, t); else renderer.render(scene, camera);
   }
@@ -198,9 +204,16 @@
 
   // Scenes are built the first time they are needed (and quietly ahead of time once the page is up),
   // so opening the page only has to build the first one.
+  function setLevel(n) {
+    level = n; ratio = n >= 3 ? 0.7 : n >= 1 ? 1 : ratio;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, ratio)); renderer.setSize(window.innerWidth, window.innerHeight, false); sizeWave();
+    if (n >= 3) { renderer.shadowMap.enabled = false; scene.traverse(function (o) { if (o.material) o.material.needsUpdate = true; }); }
+    document.documentElement.classList.toggle('is-light', n >= 2); shadowDirty = 4;
+    if (window.console) console.info('[soraine] quality level ' + n);
+  }
   function ensure(id) {
     if (built[id] || !K.scenes[id]) return;
-    built[id] = true; K.scenes[id].build(E, groups[id]);
+    built[id] = true; var t0 = performance.now(); K.scenes[id].build(E, groups[id]); (window.__built = window.__built || {})[id] = Math.round(performance.now() - t0);
     groups[id].traverse(function (o) { if (o.isMesh && o.material.isMeshStandardMaterial) { o.castShadow = !o.userData.noCast; o.receiveShadow = !o.userData.noReceive; } });    floaters.forEach(function (o) { if (!o.userData.home) { o.userData.home = o.position.clone(); o.userData.turn = o.rotation.clone(); } });
     shadowDirty = 4;
   }
@@ -225,12 +238,12 @@
 
   window.SoraineScene = {
     init: function (canvas, first) {
-      renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+      renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance' }); window.__R = renderer;
       renderer.outputEncoding = T.sRGBEncoding; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
       renderer.shadowMap.enabled = !LITE; renderer.shadowMap.type = T.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false;   // add ?lite to the address for slow machines: no shadows, lower resolution
       E.renderer = renderer;
       build(first || Object.keys(K.scenes)[0]); setState(first || Object.keys(K.scenes)[0]);
-      setTimeout(prebuild, 3500);
+      setTimeout(prebuild, 2500);
       canvas.addEventListener('webglcontextlost', function (ev) { ev.preventDefault(); window.dispatchEvent(new CustomEvent('soraine:error', { detail: 'The graphics card dropped the 3D view (out of graphics memory). Reload the page.' })); });
       camera.aspect = window.innerWidth / window.innerHeight; overview();
       if (still) { camPos.copy(goalPos); camLook.copy(goalLook); view = 'overview'; }
