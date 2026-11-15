@@ -45,28 +45,31 @@
       <p class="muted">Team Soraine, NASA Space Apps 2026. Gravity data, scan wave and loose-prop physics by Tony. The 3D scenes are stylised, not to scale, and were built in code with AI assistance (see the AI log in the project).</p>
     </article>
 
-    <details id="lab" class="lab" open>
-      <summary>Stove readout: <span id="lab-world">Earth</span></summary>
-      <dl id="lab-facts" class="facts"></dl>
-      <dl class="facts">
-        <dt>Compared with Earth</dt><dd><span id="lab-ratio">1.00 g</span> <small class="src">computed from the gravity above</small></dd>
-        <dt>Fuel pressure</dt><dd>&mdash; <small class="src warn">no sourced value yet</small></dd>
-        <dt>Egg</dt><dd><span id="lab-egg">raw</span> <small class="src warn">illustration, same in every world</small></dd>
-      </dl>
-      <label class="valve" for="lab-valve">Burner valve <output id="lab-valve-out" for="lab-valve">100% open</output></label>
-      <input id="lab-valve" type="range" min="0" max="100" step="1" value="100">
-      <p class="small">The valve changes the drawn flame only. No flow rate is modelled.</p>
-      <div class="lab-row">
-        <button id="lab-ignite" type="button">Flare the burner</button>
-        <button id="lab-egg-reset" type="button">New egg</button>
-        <button id="lab-top" type="button">Back to the scene view</button>
+    <aside class="side" aria-label="Stove readout and controls">
+      <details id="lab" class="lab">
+        <summary>Readout: <span id="lab-world">Earth</span></summary>
+        <dl id="lab-facts" class="facts"></dl>
+        <dl class="facts">
+          <dt>Compared with Earth</dt><dd><span id="lab-ratio">1.00 g</span> <small class="src">computed</small></dd>
+          <dt>Fuel pressure</dt><dd>&mdash; <small class="src warn">no sourced value yet</small></dd>
+          <dt>Egg</dt><dd><span id="lab-egg">raw</span> <small class="src warn">illustration</small></dd>
+        </dl>
+        <p class="small">The valve changes the drawn flame only; no flow rate is modelled. The egg sets at the same speed in every world. Drop time is t = &radic;(2h/g) for 1 m with no air. The scan gives every loose prop the same small kick <small class="src warn">schematic</small>; gravity decides what happens next.</p>
+      </details>
+      <div class="quick">
+        <label class="valve" for="lab-valve">Burner valve <output id="lab-valve-out" for="lab-valve">100% open</output></label>
+        <input id="lab-valve" type="range" min="0" max="100" step="1" value="100">
+        <div class="lab-row">
+          <button id="lab-ignite" type="button">Flare</button>
+          <button id="lab-drop" type="button">Drop 1 m</button>
+          <span class="fall" title="Fall time from 1 m, no air"><span id="lab-fall">0.45 s</span></span>
+        </div>
+        <div class="lab-row">
+          <button id="lab-top" type="button">Back to the scene view</button>
+          <button id="lab-egg-reset" type="button">New egg</button>
+        </div>
       </div>
-      <p class="small">Drag the loose props (salt, spoon, eggs, tomato&hellip;). When you change world, a scan from the flame gives each one the same small kick; gravity decides what happens next. <small class="src warn">kick is schematic</small></p>
-      <div class="lab-row">
-        <button id="lab-drop" type="button">Drop a spoon from 1 m</button>
-        <span class="fall"><span id="lab-fall">0.45 s</span> <small class="src">t = &radic;(2h/g), no air</small></span>
-      </div>
-    </details>
+    </aside>
 
     <section class="hero">
       <h1 id="title">Flame in Freefall</h1>

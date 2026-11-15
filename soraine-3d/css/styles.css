@@ -128,3 +128,30 @@ button.face:focus-visible { outline: 2px solid #5aa8ff; outline-offset: -4px; }
 
 /* dragging in the scene should never select the page text */
 .stage { -webkit-user-select: none; user-select: none; }
+
+/* ---- polish pass: frosted-glass panels in the margins, compact world bar ---- */
+.worlds, .pages, .lab, .quick, .card { background: rgba(18,20,28,.32); backdrop-filter: blur(18px) saturate(1.35); -webkit-backdrop-filter: blur(18px) saturate(1.35); border: 1px solid rgba(255,255,255,.14); text-shadow: 0 1px 6px rgba(0,0,0,.65); }
+.worlds { padding: 2px; gap: 1px; }
+.worlds button { font-size: 11px; letter-spacing: .1em; padding: 4px 10px; min-height: 28px; }
+.worlds button small { display: inline; margin: 0 0 0 6px; font-size: 9.5px; opacity: .7; }
+.worlds button[aria-pressed="true"], .pages button[aria-pressed="true"] { background: rgba(244,241,232,.92); color: #000; text-shadow: none; }
+.pages button { font-size: 11px; padding: 5px 12px; min-height: 30px; }
+.side { position: absolute; top: calc(max(var(--pad), env(safe-area-inset-top)) + 42px); right: max(var(--pad), env(safe-area-inset-right)); width: min(15rem, 62vw); display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 170px); overflow: auto; }
+.side .lab { position: static; width: auto; max-height: none; padding: 8px 12px; font-size: 12.5px; }
+.side .lab[open] summary { margin-bottom: 8px; }
+.quick { padding: 8px 12px 10px; font-size: 12.5px; }
+.quick input[type=range] { width: 100%; accent-color: #7db8ff; margin: 4px 0 0; }
+.quick .lab-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.quick button { font: inherit; font-size: 12px; color: var(--ink); background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.28); padding: 5px 9px; min-height: 30px; cursor: pointer; text-shadow: inherit; }
+.quick button:hover { background: rgba(255,255,255,.26); }
+.quick button:active { transform: scale(.97); }
+.quick button:focus-visible, .quick input:focus-visible { outline: 2px solid #5aa8ff; outline-offset: 2px; }
+.card { top: auto; bottom: max(var(--pad), env(safe-area-inset-bottom)); transform: none; width: min(19rem, 80vw); max-height: 52vh; padding: 14px 16px; line-height: 1.4; }
+.card h2 { font-size: 20px; margin-bottom: 4px; }
+.card p { font-size: 13.5px; margin-bottom: 8px; }
+.card .muted { font-size: 12.5px; color: rgba(244,241,232,.78); }
+.card dt { font-size: 12px; margin-top: 6px; color: rgba(244,241,232,.78); }
+.card dd { font-size: 15px; }
+.facts dt { color: rgba(244,241,232,.78); }
+.is-inspect .side, .is-cut .side, .is-about .side { display: none; }
+@media (max-width: 760px) { .side { top: calc(max(var(--pad), env(safe-area-inset-top)) + 40px); width: min(13rem, 58vw); } .card { bottom: 60px; } }

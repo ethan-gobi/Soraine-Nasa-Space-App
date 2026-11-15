@@ -139,7 +139,7 @@
       if ($('stage').classList.contains('is-inspect') || /input|textarea/i.test(e.target.tagName)) return; var i = ORDER.indexOf(page);
       if (e.key === 'ArrowRight') setPage(ORDER[(i + 1) % 3]); if (e.key === 'ArrowLeft') setPage(ORDER[(i + 2) % 3]);
     });
-    if (window.matchMedia('(max-width: 760px)').matches) $('lab').removeAttribute('open');
+
     setValve(1);
   }
   window.SoraineLab = { page: function () { return page; }, setPage: setPage, world: function () { return stop; }, g: function () { return K.g(stop); }, setValve: setValve, ignite: ignite, drop: startDrop, resetEgg: function () { cooked = 0; paint(); } };

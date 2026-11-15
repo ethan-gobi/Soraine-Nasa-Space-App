@@ -34,11 +34,18 @@
   function ball(r, material, x, y, z, parent) { return put(new T.SphereGeometry(r, 24, 16), material, x, y, z, parent); }
   function group(x, y, z, parent, name) { var g = new T.Group(); g.position.set(x, y, z); g.name = name; objects[name] = g; parent.add(g); return g; }
   function floater(obj, lift, spin) { obj.userData.lift = lift; obj.userData.spin = spin; floaters.push(obj); }
-  function starField(parent, count, radius) {                // crisp points on a big sphere
-    var pts = [], rnd = function (q) { var v = Math.sin(q * 127.1) * 43758.5453; return v - Math.floor(v); };
-    for (var i = 0; i < count; i++) { var th = rnd(i) * 6.283, ph = Math.acos(2 * rnd(i + 0.5) - 1); pts.push(radius * Math.sin(ph) * Math.cos(th), radius * Math.cos(ph), radius * Math.sin(ph) * Math.sin(th)); }
-    var sg = new T.BufferGeometry(); sg.setAttribute('position', new T.Float32BufferAttribute(pts, 3));
-    var st = new T.Points(sg, new T.PointsMaterial({ color: 0xffffff, size: 2.2, sizeAttenuation: false })); parent.add(st); return st;
+  function starField(parent, count, radius) {                // crisp points on a big sphere: mostly faint, a few bright, slight colour variety
+    var pts = [], cols = [], big = [], rnd = function (q) { var v = Math.sin(q * 127.1) * 43758.5453; return v - Math.floor(v); };
+    for (var i = 0; i < count; i++) {
+      var th = rnd(i) * 6.283, ph = Math.acos(2 * rnd(i + 0.5) - 1), x = radius * Math.sin(ph) * Math.cos(th), y = radius * Math.cos(ph), z = radius * Math.sin(ph) * Math.sin(th);
+      var m = Math.pow(rnd(i + 0.25), 2.6), br = 0.3 + 0.7 * m, tint = rnd(i + 0.75);
+      pts.push(x, y, z); cols.push(br * (tint > 0.82 ? 1 : 0.86 + 0.14 * tint), br * 0.93, br * (tint < 0.25 ? 1 : 0.82 + 0.18 * tint));
+      if (m > 0.72) big.push(x * 0.995, y * 0.995, z * 0.995);
+    }
+    var sg = new T.BufferGeometry(); sg.setAttribute('position', new T.Float32BufferAttribute(pts, 3)); sg.setAttribute('color', new T.Float32BufferAttribute(cols, 3));
+    var st = new T.Points(sg, new T.PointsMaterial({ color: 0xffffff, size: 2, sizeAttenuation: false, vertexColors: true })); parent.add(st);
+    if (big.length) { var bg = new T.BufferGeometry(); bg.setAttribute('position', new T.Float32BufferAttribute(big, 3)); st.add(new T.Points(bg, new T.PointsMaterial({ color: 0xffffff, size: 3.4, sizeAttenuation: false, transparent: true, opacity: 0.9 }))); }
+    return st;
   }
 
   /* A small lighting environment, so metal and enamel reflect something real.
