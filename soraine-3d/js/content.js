@@ -9,7 +9,7 @@
 window.SORAINE_CONTENT = {
   first: 'earth',
   STOPS: {
-    earth: { title: 'Flame in Freefall', line: '“Same spark. Different world.”', gravity: 'Earth · 1 g', go: 'Begin the journey', next: 'moon' },
+    earth: { title: 'Flame in Freefall', line: '“Same spark. Different world.”', gravity: 'Earth · 1 g', go: 'Go to the Moon', next: 'moon' },
     moon:  { title: 'Lunar galley', line: 'The same stove, on the Moon. Things still fall here, only slowly.', gravity: 'Moon \u00B7 about 1/6 g', go: 'Go on to Mars', next: 'mars' },
     mars:  { title: 'Mars galley', line: 'The same stove, on Mars. Things fall faster here than on the Moon, and slower than on Earth.', gravity: 'Mars \u00B7 about 3/8 g', go: 'Back to the kitchen', next: 'earth' },
     orbit: { title: 'Orbit', line: 'Everything is falling together, so nothing rests on anything. The flame has no up to rise toward.', gravity: 'Orbit · free fall', go: 'Back to the kitchen', next: 'earth' }
@@ -23,5 +23,6 @@ window.SORAINE_CONTENT = {
     mug:      { name: 'Enamel mug', text: 'Steel with a glassy coat. It will not burn.' },
     rocket:   { name: 'Toy rocket', text: 'A reminder of where this flame is going.' }
   },
+  BEGIN: 'Begin the journey',                                   // the button while the page is in the top-down view of the pan
   NOTE: 'No NASA evidence record is linked to this object yet.'
 };

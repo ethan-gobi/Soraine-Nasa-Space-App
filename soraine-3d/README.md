@@ -70,3 +70,9 @@ Only the kitchen is built when the page opens. The Moon and Mars are built quiet
 - `js/tony-props.js`: Tony's `kitchen/props.js` ported to a plain script. Same props, sizes, masses, solver settings, per-body gravity, scan kick, microgravity drift and pointer dragging; positions and fixed collision shapes are set for this stove.
 - `js/vendor/cannon.js`: his bundled cannon-es 0.20 with the module export swapped for `window.CANNON`.
 - The ISS button goes to the `orbit` stop, which uses Tony's `iss` world (g about 0).
+
+## Top-down view and Tony's scan transition
+
+- The page opens looking straight down on the pan (Tony's landing view). "Begin the journey" pulls back to the scene. "Top view of the pan" in the readout card, or the T key, switches back and forth in any world.
+- Changing world uses Tony's scan wave (`kitchen/wave.js`), ported into `js/engine.js` (`initWave`, `renderWave`, `scanCapture`, `scanFire`): a front runs out from the stove flame with a white leading line, trailing scan lines, a glow and object outlines, and a camera jolt as it passes. Pixels the front has passed show the new world; the rest still show the old one. The loose props are kicked by the same front.
+- With reduced motion on, or if the browser lacks depth textures, the older wipe is used instead.

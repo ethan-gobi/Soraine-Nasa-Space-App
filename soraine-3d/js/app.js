@@ -14,7 +14,7 @@
     var s = STOPS[id]; current = id;
     stage.setAttribute('data-scene', id);
     $('title').textContent = s.title; $('line').textContent = s.line;
-    $('gravity').textContent = s.gravity; $('go').textContent = s.go;
+    $('gravity').textContent = s.gravity; $('go').textContent = SoraineScene.isTop && SoraineScene.isTop() ? C.BEGIN : s.go;
     SoraineScene.setState(id);
     try { history.replaceState(null, '', '#' + id); } catch (e) {}
     window.dispatchEvent(new CustomEvent('soraine:scene', { detail: { to: id } }));
@@ -24,7 +24,12 @@
      then open a growing circle in the picture, centred on the sun. */
   function goTo(id) {
     if (!STOPS[id] || busy || inspecting || id === current) return false;
-    busy = true; stage.classList.add('is-cut');
+    if (!reduced.matches && SoraineScene.scanCapture()) {       // Tony's scan: a front runs out from the stove flame and uncovers the new world
+      busy = true; stage.classList.add('is-cut'); show(id);
+      SoraineScene.scanFire(function () { stage.classList.remove('is-cut'); busy = false; $('go').focus({ preventScroll: true }); });
+      return true;
+    }
+    busy = true; stage.classList.add('is-cut');                 // fallback (reduced motion, or no depth textures): the older wipe from the sun
     SoraineScene.edges(reduced.matches ? 0 : 0.9);
     wipe.style.backgroundImage = 'url(' + SoraineScene.snapshot() + ')'; wipe.style.display = 'block';
     show(id);
@@ -78,7 +83,12 @@
   if (ok) show(STOPS[location.hash.slice(1)] ? location.hash.slice(1) : C.first);
   requestAnimationFrame(function () { stage.classList.add('is-on'); });
 
-  $('go').addEventListener('click', function () { goTo(STOPS[current].next); });
+  // The page opens looking straight down on the pan. The first click pulls back to the whole scene; after that the button moves on.
+  function setTop(on) { SoraineScene.topView(on); $('go').textContent = on ? C.BEGIN : STOPS[current].go; var b = $('lab-top'); if (b) b.textContent = on ? 'Back to the scene view' : 'Top view of the pan'; }
+  if (ok && location.hash.slice(1) && location.hash.slice(1) !== C.first) setTop(false);
+  $('go').addEventListener('click', function () { if (SoraineScene.isTop()) { setTop(false); return; } goTo(STOPS[current].next); });
+  if ($('lab-top')) $('lab-top').addEventListener('click', function () { setTop(!SoraineScene.isTop()); });
+  window.addEventListener('keydown', function (e) { if ((e.key === 't' || e.key === 'T') && !inspecting && !/input|textarea/i.test(e.target.tagName)) setTop(!SoraineScene.isTop()); });
   $('info-back').addEventListener('click', release);
   window.addEventListener('keydown', function (e) { if (e.key === 'Escape') release(); });
   window.addEventListener('hashchange', function () { goTo(location.hash.slice(1) || C.first); });

@@ -33,6 +33,10 @@
     onFrame: function (fn) { hooks.push(fn); },                // fn(t, { free, still, focus, state })
     group: function (id) { return groups[id]; }
   };
+  var top = true;                                               // the top-down view over the pan (the opening shot)
+  // Tony's scan wave: see scanCapture / scanFire below
+  var wave = { active: false, t: 0, R: -1, v0: 4, accel: 44, cubic: 120, maxR: 220, swept: false, tSweep: 0 }, rt = null, oldCanvas = null, oldTex = null, quad = null, qScene = null, qCam = null, waveDone = null, bufSize = new T.Vector2();
+  E.wave = wave;
   function def() { return K.scenes[state]; }
 
   function build(firstId) {
@@ -65,7 +69,7 @@
     renderer.setSize(window.innerWidth, window.innerHeight, false);
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.fov = camera.aspect < 0.8 ? 62 : (camera.aspect < 1.4 ? 54 : 46);
-    camera.updateProjectionMatrix(); shadowDirty = 4; draw(performance.now());
+    camera.updateProjectionMatrix(); shadowDirty = 4; sizeWave(); draw(performance.now());
   }
   function overview() { var c = def().camera(camera.aspect); goalPos.fromArray(c.pos); goalLook.fromArray(c.look); }
 
@@ -87,6 +91,7 @@
       goalPos.set(focusCenter.x + orb.cd * Math.sin(orb.cph) * Math.sin(orb.cth), focusCenter.y + orb.cd * Math.cos(orb.cph), focusCenter.z + orb.cd * Math.sin(orb.cph) * Math.cos(orb.cth));
       camPos.copy(goalPos);
     }
+    else if (top) { goalPos.copy(E.burner).add(tmp.set(0, 1.08, 0.03)); goalLook.copy(E.burner); sway = 0; }   // straight down on the pan
     else overview();
     var ease = still ? 1 : 1 - Math.exp(-dt * (view === 'inspect' ? 5 : 2.2));
     camPos.lerp(goalPos, ease); camLook.lerp(goalLook, ease);
@@ -105,7 +110,68 @@
     if (sc.update && !focus) sc.update(E, t, still);
 
     if (shadowDirty > 0 || (k > 0.002 && k < 0.998) || (sc.liveShadows && !focus)) { renderer.shadowMap.needsUpdate = true; shadowDirty--; }   // shadows only redraw when something moved
-    renderer.render(scene, camera);
+    if (wave.active) renderWave(dt, t); else renderer.render(scene, camera);
+  }
+
+  /* Tony's scan wave (kitchen/wave.js in his repository), in the structure he describes: world position from depth ->
+     distance to the flame -> masks built from (R - dist): a white front line, scan lines trailing behind it, a glow just
+     behind the front, darkening across the trail, and a depth-edge outline on objects inside the trail.
+     Here the front also uncovers the new world: pixels it has passed show the new scene, the rest still show the old one. */
+  function initWave() {
+    renderer.getDrawingBufferSize(bufSize);
+    rt = new T.WebGLRenderTarget(bufSize.x, bufSize.y, { type: T.HalfFloatType, depthTexture: new T.DepthTexture(bufSize.x, bufSize.y, T.UnsignedIntType) });
+    oldCanvas = document.createElement('canvas'); oldTex = new T.CanvasTexture(oldCanvas); oldTex.minFilter = oldTex.magFilter = T.LinearFilter; oldTex.generateMipmaps = false;
+    quad = new T.Mesh(new T.PlaneGeometry(2, 2), new T.ShaderMaterial({ depthTest: false, depthWrite: false,
+      uniforms: { tDiffuse: { value: rt.texture }, tDepth: { value: rt.depthTexture }, tOld: { value: oldTex }, uInvProj: { value: new T.Matrix4() }, uCamWorld: { value: new T.Matrix4() }, uNear: { value: 0.1 }, uFar: { value: 600 },
+        uCenter: { value: new T.Vector3() }, uRadius: { value: -1 }, uTrail: { value: 4 }, uSpacing: { value: 0.35 }, uStrength: { value: 0 }, uLine: { value: new T.Color(0.45, 0.82, 1.0) }, uFront: { value: new T.Color(1, 1, 1) },
+        uTexel: { value: new T.Vector2() }, uShake: { value: new T.Vector2() } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+      fragmentShader: [
+        'uniform sampler2D tDiffuse, tDepth, tOld; uniform mat4 uInvProj, uCamWorld; uniform vec3 uCenter, uLine, uFront;',
+        'uniform float uNear, uFar, uRadius, uTrail, uSpacing, uStrength; uniform vec2 uTexel, uShake; varying vec2 vUv;',
+        'float linDepth(float d){ float z = d*2.-1.; return (2.*uNear*uFar)/(uFar+uNear-z*(uFar-uNear)); }',
+        'vec3 worldPos(vec2 uv, float d){ vec4 ndc = vec4(uv*2.-1., d*2.-1., 1.); vec4 v = uInvProj*ndc; v/=v.w; return (uCamWorld*v).xyz; }',
+        'void main(){',
+        '  vec2 uv = vUv + uShake;',
+        '  float d = texture2D(tDepth, uv).x; bool sky = d > 0.99999;',
+        '  float dist = distance(worldPos(uv, d), uCenter), behind = uRadius - dist;',
+        '  vec3 fresh = texture2D(tDiffuse, uv).rgb;',
+        '  #ifdef TONE_MAPPING',
+        '    fresh = toneMapping(fresh);',
+        '  #endif',
+        '  fresh = linearToOutputTexel(vec4(fresh, 1.)).rgb;',
+        '  float shown = sky ? smoothstep(20., 110., uRadius) : step(0., behind);        // sky has no distance: it crossfades as the front runs out',
+        '  vec3 col = mix(texture2D(tOld, uv).rgb, fresh, shown);',
+        '  if (uRadius > 0. && !sky && uStrength > 0.) {',
+        '    float fw = max(fwidth(behind), 1e-4);',
+        '    float trail = step(0., behind) * (1. - smoothstep(0., uTrail, behind));',
+        '    float front = 1. - smoothstep(0., max(fw*1.5, 0.02), abs(behind));',
+        '    float ph = abs(fract(behind/uSpacing) - 0.5) * uSpacing, halfW = max(fw*0.9, uSpacing*0.035);',
+        '    float lines = (1. - smoothstep(halfW, halfW + fw, ph)) * trail * (1. - smoothstep(0.25, 0.6, fw/uSpacing));',
+        '    float glow = step(0., behind) * exp(-max(behind, 0.) / max(uTrail*0.12, 0.05));',
+        '    float dl = linDepth(texture2D(tDepth, uv-vec2(uTexel.x,0.)).x), dr = linDepth(texture2D(tDepth, uv+vec2(uTexel.x,0.)).x);',
+        '    float du = linDepth(texture2D(tDepth, uv+vec2(0.,uTexel.y)).x), dd = linDepth(texture2D(tDepth, uv-vec2(0.,uTexel.y)).x);',
+        '    float edge = smoothstep(0.03, 0.2, (abs(dr-dl)+abs(du-dd)) / max(linDepth(d)*0.06, 0.02));',
+        '    col *= 1. - 0.38 * trail * uStrength;',
+        '    col += (uLine * (lines*1.4 + glow*0.6 + edge*trail*1.1) + uFront * front * 1.8) * uStrength;',
+        '  }',
+        '  gl_FragColor = vec4(col, 1.);',
+        '}'].join('\n') }));
+    quad.frustumCulled = false; qScene = new T.Scene(); qScene.add(quad); qCam = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  }
+  function sizeWave() { if (!rt) return; renderer.getDrawingBufferSize(bufSize); rt.setSize(bufSize.x, bufSize.y); }
+  function renderWave(dt, t) {
+    wave.t += dt;
+    wave.R = wave.v0 * wave.t + 0.5 * wave.accel * wave.t * wave.t + wave.cubic * Math.pow(Math.max(0, wave.t - 1), 3);   // Tony's front: slow off the hob, then racing to the horizon
+    var dCam = camera.position.distanceTo(E.burner), u = quad.material.uniforms, gap = wave.R - dCam;
+    if (!wave.swept && gap >= 0) { wave.swept = true; wave.tSweep = wave.t; }
+    var amp = (Math.exp(-(gap * gap) / 0.6) + (wave.swept ? Math.exp(-(wave.t - wave.tSweep) / 0.35) * 0.45 : 0)) / (1 + dCam * 0.35) * 0.03;   // a jolt as the front crosses the camera, then a short rumble
+    u.uShake.value.set(Math.sin(t * 43 + 1.3) * Math.sin(t * 15.9 + 2.2) * amp * 0.5, Math.sin(t * 37 + 4.1) * Math.sin(t * 13.7 + 7) * amp * 0.35);
+    camera.updateMatrixWorld(); u.uInvProj.value.copy(camera.projectionMatrixInverse); u.uCamWorld.value.copy(camera.matrixWorld); u.uNear.value = camera.near; u.uFar.value = camera.far;
+    u.uCenter.value.copy(E.burner); u.uRadius.value = wave.R; u.uTrail.value = Math.min(0.6 + wave.R * 0.3, 16 + wave.R * 0.03);
+    u.uStrength.value = 1 - Math.min(1, Math.max(0, (wave.R - wave.maxR * 0.55) / (wave.maxR * 0.45))); u.uTexel.value.set(1 / bufSize.x, 1 / bufSize.y);
+    renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(null); renderer.render(qScene, qCam);
+    if (wave.R > wave.maxR) { wave.active = false; wave.R = -1; shadowDirty = 4; var cb = waveDone; waveDone = null; if (cb) cb(); }
   }
   function loop(now) { draw(now); requestAnimationFrame(loop); }
 
@@ -147,12 +213,28 @@
       canvas.addEventListener('webglcontextlost', function (ev) { ev.preventDefault(); window.dispatchEvent(new CustomEvent('soraine:error', { detail: 'The graphics card dropped the 3D view (out of graphics memory). Reload the page.' })); });
       camera.aspect = window.innerWidth / window.innerHeight; overview();
       if (still) { camPos.copy(goalPos); camLook.copy(goalLook); view = 'overview'; }
-      else { camPos.copy(E.burner).add(tmp.set(0.03, 0.6, 0.26)); camLook.copy(E.burner); introUntil = performance.now() + 2200; }
+      else { camPos.copy(E.burner).add(tmp.set(0, 1.08, 0.03)); camLook.copy(E.burner); view = 'overview'; }   // open looking straight down on the pan
       resize();
       window.addEventListener('resize', resize);
       requestAnimationFrame(loop);
     },
     setState: setState,
+    /* the top-down view over the pan: on or off */
+    topView: function (on) { top = !!on; return top; },
+    isTop: function () { return top; },
+    /* Scan transition, step 1: keep a picture of the world as it is now. Call before changing scene. */
+    scanCapture: function () {
+      try {
+        if (!rt) initWave(); sizeWave(); draw(performance.now());
+        oldCanvas.width = renderer.domElement.width; oldCanvas.height = renderer.domElement.height; oldCanvas.getContext('2d').drawImage(renderer.domElement, 0, 0); oldTex.needsUpdate = true; return true;
+      } catch (e) { if (window.console) console.warn(e); return false; }
+    },
+    /* Scan transition, step 2: after the scene has changed, send the front out from the stove flame. done() runs when it has passed. */
+    scanFire: function (done) {
+      overview(); if (top) { goalPos.copy(E.burner).add(tmp.set(0, 1.08, 0.03)); goalLook.copy(E.burner); }
+      camPos.copy(goalPos); camLook.copy(goalLook);
+      wave.active = true; wave.t = 0; wave.R = 0.001; wave.swept = false; waveDone = done || null;
+    },
     scenes: function () { return Object.keys(K.scenes); },
     setStill: function (v) { still = !!v; },
     /* the current frame as an image, for the scan wipe and the blurred backdrop */

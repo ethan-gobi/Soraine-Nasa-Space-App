@@ -9,7 +9,7 @@ body { background: #000; color: var(--ink); font-family: "Jost", "Futura", "Cent
 p, h1 { margin: 0; }
 
 .stage { position: fixed; inset: 0; overflow: hidden; }
-.scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 .shade { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(75% 85% at 0% 100%, rgba(0,0,0,.62) 0%, rgba(0,0,0,.3) 45%, rgba(0,0,0,0) 100%), linear-gradient(0deg, rgba(0,0,0,.28) 0%, rgba(0,0,0,0) 30%), linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,0) 14%); }
 .veil { position: absolute; inset: 0; background: #000; opacity: 1; pointer-events: none; transition: opacity 700ms linear; }
 .is-on .veil { opacity: 0; }

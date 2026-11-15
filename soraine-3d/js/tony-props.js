@@ -102,7 +102,7 @@
 
     E.onFrame(function (t, f) {
       var dt = Math.min(0.05, Math.max(0, t - last)); last = t; root.visible = !f.focus; if (f.still || f.focus) return;
-      if (R < 1e4) R += dt * 4;                                   // the scan front spreads out from the stove flame
+      if (E.wave && E.wave.active) R = E.wave.R; else if (R < 1e4) R += dt * 40;   // the scan front spreads out from the stove flame (the same front the screen shows)
       bodies.forEach(function (b) {                               // the front reaches a prop: same kick for everyone, gravity decides the outcome
         if (b.swept) return; var p = b.body.position, d = Math.hypot(p.x - center.x, p.y - center.y, p.z - center.z); if (d > R) return;
         b.swept = true; var ox = p.x - center.x, oz = p.z - center.z, ol = Math.hypot(ox, oz) || 1, fall = 1 / (1 + d * 1.5);
