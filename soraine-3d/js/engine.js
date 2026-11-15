@@ -57,7 +57,7 @@
     inspectKey = new T.Group(); inspectKey.visible = false; scene.add(inspectKey);
     var ik = new T.DirectionalLight(0xffd9a8, 1.5); ik.position.set(2, 3, 4); inspectKey.add(ik);
     var ir = new T.DirectionalLight(0x7fa8ff, 0.5); ir.position.set(-3, 1, -2); inspectKey.add(ir);
-    camera = new T.PerspectiveCamera(46, 1, 0.1, 600);
+    camera = E.camera = new T.PerspectiveCamera(46, 1, 0.1, 600);
   }
 
   function resize() {

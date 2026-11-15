@@ -64,3 +64,9 @@ Only the kitchen is built when the page opens. The Moon and Mars are built quiet
 - `js/physics.js`: uses that data. Gravity drives the drop test and the falling debris (`K.g('moon')`). The flame takes Tony's shape numbers per world. The valve slider scales the drawn flame and turns the stove dial and canister wheel. Clicking the pan or egg flares the burner.
 - The readout card shows each fact with its source label. Anything without a source stays blank (fuel pressure) or is labelled `schematic`, `unverified` or `illustration`.
 - World buttons at the top call `Soraine.goTo('earth' | 'moon' | 'mars')`.
+
+## Tony's loose props (rigid-body sim)
+
+- `js/tony-props.js`: Tony's `kitchen/props.js` ported to a plain script. Same props, sizes, masses, solver settings, per-body gravity, scan kick, microgravity drift and pointer dragging; positions and fixed collision shapes are set for this stove.
+- `js/vendor/cannon.js`: his bundled cannon-es 0.20 with the module export swapped for `window.CANNON`.
+- The ISS button goes to the `orbit` stop, which uses Tony's `iss` world (g about 0).

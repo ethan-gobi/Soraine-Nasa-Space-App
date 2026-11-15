@@ -103,6 +103,7 @@
       el.addEventListener('pointerup', dragEnd); el.addEventListener('pointercancel', dragEnd);
     });
     canvas.addEventListener('pointerup', function (e) {
+      if (window.SoraineDrag) return;                           // a loose prop was being dragged (js/tony-props.js): not a click
       if (inspecting || !down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 8) return;
       var name = SoraineScene.pick(e.clientX, e.clientY); if (name) inspect(name);
     });

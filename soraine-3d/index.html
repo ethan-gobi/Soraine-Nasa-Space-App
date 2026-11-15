@@ -26,6 +26,7 @@
       <button type="button" data-world="earth" aria-pressed="true">Earth</button>
       <button type="button" data-world="moon" aria-pressed="false">Moon</button>
       <button type="button" data-world="mars" aria-pressed="false">Mars</button>
+      <button type="button" data-world="orbit" aria-pressed="false">ISS</button>
     </nav>
 
     <details id="lab" class="lab" open>
@@ -43,6 +44,7 @@
         <button id="lab-ignite" type="button">Flare the burner</button>
         <button id="lab-egg-reset" type="button">New egg</button>
       </div>
+      <p class="small">Drag the loose props (salt, spoon, eggs, tomato&hellip;). When you change world, a scan from the flame gives each one the same small kick; gravity decides what happens next. <small class="src warn">kick is schematic</small></p>
       <div class="lab-row">
         <button id="lab-drop" type="button">Drop a spoon from 1 m</button>
         <span class="fall"><span id="lab-fall">0.45 s</span> <small class="src">t = &radic;(2h/g), no air</small></span>
@@ -87,6 +89,8 @@
 <script src="js/physics-data.js"></script>
 <script src="js/props.js"></script>
 <script src="js/physics.js"></script>
+<script src="js/vendor/cannon.js"></script>
+<script src="js/tony-props.js"></script>
 <script src="js/scenes/kitchen.js"></script>
 <script src="js/terrain-data.js"></script>
 <script src="js/outpost.js"></script>
