@@ -158,3 +158,6 @@ button.face:focus-visible { outline: 2px solid #5aa8ff; outline-offset: -4px; }
 
 /* Tony's review: the title, line and next-world button in the bottom-left repeat the world bar, so they only show on the opening top-down view */
 .stage:not(.is-top) .hero { display: none; }
+
+/* things to try (js/play.js) */
+.play-out { margin: 6px 0 0; min-height: 1.3em; font-size: 12px; opacity: .85; font-variant-numeric: tabular-nums; }

@@ -86,3 +86,11 @@ Only the kitchen is built when the page opens. The Moon and Mars are built quiet
 ## The flame is the main character
 
 Tony's review asked for the fire, not the stove, to be the centre. `js/props.js` builds one large flame (group `fire`, two layers of his cone-to-sphere shader) under a pan raised on a trivet (`LIFT`). `js/physics.js` sizes and colours it each frame from the world's `flame` numbers in `js/physics-data.js` (marked schematic). The cameras in `js/engine.js` (`overview`, detail and the opening shot) all aim at `E.burner`. To restyle the flame, edit `fireMat` in `js/props.js`; to change how it responds to a world, edit the fire block in `js/physics.js`.
+
+## Things to try (`js/play.js`)
+
+Flip the egg (F), Salt (S) and Blow (B). One self-contained file: it reads the world's gravity from `SoraineLab.g()` and moves the pan, egg and flame after the engine has placed them. The toss speed `TOSS` is an assumed value; air time and peak height are computed from it and the sourced g. Remove the file and its three buttons in `index.html` and nothing else changes.
+
+## ISS scene (`js/scenes/orbit.js`)
+
+Drawn in code: the hull the stove stands on, a station behind it and the Earth below. An illustration, not a model of the real ISS.
