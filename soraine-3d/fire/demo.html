@@ -1,0 +1,18 @@
+<!doctype html><meta charset="utf-8"><title>Soraine flame, on its own</title>
+<style>body{margin:0;background:#101216;color:#fff;font:14px system-ui}canvas{display:block}nav{position:fixed;top:12px;left:12px;display:flex;gap:6px}button{font:inherit;padding:6px 10px}</style>
+<nav><button data-w="earth">Earth</button><button data-w="mars">Mars</button><button data-w="moon">Moon</button><button data-w="iss">ISS</button><button id="flare">Flare</button><button id="blow">Blow</button></nav>
+<!-- needs a local server (ES modules do not load from a double-clicked file): e.g. Tony's start.bat, or `python -m http.server` -->
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+import { createFlame } from './flame.js';
+const G = { earth: 9.81, mars: 3.71, moon: 1.62, iss: 0 }; let g = 9.81;
+const r = new THREE.WebGLRenderer({ antialias: true }); document.body.appendChild(r.domElement);
+const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(35, 1, 0.01, 50); cam.position.set(0.25, 0.2, 0.75); cam.lookAt(0, 0.1, 0);
+const hob = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.02, 48), new THREE.MeshStandardMaterial({ color: 0x15171a, roughness: 0.8 })); hob.position.y = -0.011; scene.add(hob);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x202020, 0.4));
+const flame = createFlame(THREE); scene.add(flame.group);
+document.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { flame.setWorld(b.dataset.w); g = G[b.dataset.w]; });
+document.getElementById('flare').onclick = () => flame.flare(); document.getElementById('blow').onclick = () => flame.blow();
+function size() { r.setSize(innerWidth, innerHeight); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); } addEventListener('resize', size); size();
+let last = 0; r.setAnimationLoop(ms => { const t = ms / 1000, dt = Math.min(0.05, t - last); last = t; flame.update(t, dt, g); r.render(scene, cam); });
+</script>

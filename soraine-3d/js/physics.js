@@ -43,7 +43,7 @@
       if (parts.fire) {
         var U = parts.fire.uniforms, sph = f.free ? 1 : fl.sphere, blu = f.free ? 1 : fl.blue; fire.sphere += (sph - fire.sphere) * k; fire.blue += (blu - fire.blue) * k;
         U.uTime.value = f.still ? 0 : t; U.uSphere.value = fire.sphere; U.uBlue.value = fire.blue; U.uFlicker.value = fl.flicker;
-        parts.fire.group.visible = on && !(f.focus && false); var fw = fl.width * (0.7 + 0.3 * size) * (1 + 0.2 * flare), fh = fl.height * size * burst; fh += (fw * 0.78 - fh) * fire.sphere * fire.sphere;   // a full sphere is as tall as it is wide
+        parts.fire.group.visible = on && !(f.focus && false); var fw = fl.width * (0.7 + 0.3 * size) * (1 + 0.2 * flare), fh = fl.height * size * burst * 0.74 /* the Earth flame just licks the pan */; fh += (fw * 0.78 - fh) * fire.sphere * fire.sphere;   // a full sphere is as tall as it is wide
         parts.fire.group.scale.set(fw, Math.max(0.01, fh), fw);
         if (parts.ball) parts.ball.visible = false;
         if (parts.light) { parts.light.color.copy(warmLight).lerp(blueLight, fire.blue); parts.light.intensity = (1.5 + (f.still ? 0 : 0.5 * Math.sin(t * 17) * fl.flicker + 0.25 * Math.sin(t * 5.1) * fl.flicker)) * (0.45 + 0.55 * fl.height); parts.light.distance = 3.2; }

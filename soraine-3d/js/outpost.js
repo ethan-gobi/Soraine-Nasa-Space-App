@@ -51,10 +51,7 @@
     function toss(obj, x, y, z, vx, vy, vz, rest, spin) { obj.position.set(x, y, z); moon.add(obj); tossed.push({ o: obj, p: new T.Vector3(x, y, z), v: new T.Vector3(vx, vy, vz), T: 2 * vy / grav, rest: rest, ph: rand() * 6, spin: spin || 0 }); }
     function spoon(c) { var g3 = new T.Group(); rbox(0.02, 0.24, 0.012, 0.005, c, 0, 0, 0, g3); var bw = ball(0.035, c, 0, 0.15, 0, g3); bw.scale.set(1, 1.3, 0.35); return g3; }
       var paleWood = std(0xd9a55f, 0.6);
-      toss(spoon(paleWood), 1.05, 0.5, -1.55, 0.02, 1.0, 0.01, 0.5, 0.35); toss(spoon(chrome), 0.2, 0.3, -0.95, -0.03, 1.2, 0.03, 1.1, -1.0);
-      var spat = new T.Group(); rbox(0.022, 0.26, 0.014, 0.006, paleWood, 0, 0, 0, spat); rbox(0.1, 0.13, 0.01, 0.005, paleWood, 0, 0.19, 0, spat);
-      [-0.025, 0, 0.025].forEach(function (x) { rbox(0.012, 0.08, 0.012, 0.004, iron, x, 0.19, 0, spat); });
-      toss(spat, 1.38, 0.45, -1.5, 0.01, 0.9, -0.02, 0.7, 0.3);
+      // (the spoons and spatula that kept hopping here were removed after Tony's review: they pulled the eye away from the fire)
     var water = new T.MeshStandardMaterial({ color: 0xbfe3ff, roughness: 0.05, transparent: true, opacity: 0.8 });
     for (i = 0; i < 16; i++) toss(new T.Mesh(new T.SphereGeometry(0.014 + rand() * 0.016, 14, 10), water), -0.5 + rand() * 2.6, 0.03, -2.4 + rand() * 1.5, (rand() - 0.5) * 0.08, 0.7 + rand() * 0.9, (rand() - 0.5) * 0.08, 0.3 + rand() * 1.5);
     var crumb = std(0xc99a5b, 0.9);

@@ -74,7 +74,7 @@
     camera.updateProjectionMatrix(); shadowDirty = 4; sizeWave(); draw(performance.now());
   }
   // The resting view puts the fire in the middle of the frame (Tony: the flame is the main character, not the stove).
-  function overview() { goalPos.copy(E.burner).add(camera.aspect < 0.8 ? tmp.set(0.3, 0.5, 2.25) : tmp.set(0.5, 0.36, 1.45)); goalLook.copy(E.burner); goalLook.y += 0.13; }
+  function overview() { goalPos.copy(E.burner).add(camera.aspect < 0.8 ? tmp.set(0.3, 0.5, 2.1) : tmp.set(0.44, 0.3, 1.2)); goalLook.copy(E.burner); goalLook.y += 0.13; }
   function wide() { var c = def().camera(camera.aspect); goalPos.fromArray(c.pos); goalLook.fromArray(c.look); }   // each scene's own wide establishing view
 
   function draw(now) {

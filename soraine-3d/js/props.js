@@ -43,9 +43,8 @@
     // ---- pan, egg, flame ----
     stove.updateMatrixWorld(true);
     var burner = stove.localToWorld(BURNER.clone());
-    var LIFT = 0.2;                                             // the pan stands this far above the burner, on a trivet, so the flame is fully visible
-    for (i = 0; i < 4; i++) { var ta = i * Math.PI / 2 + Math.PI / 4; tube(0.006, 0.006, LIFT + 0.02, iron, BURNER.x + Math.cos(ta) * 0.19, BURNER.y + (LIFT + 0.02) / 2 - 0.01, BURNER.z + Math.sin(ta) * 0.19, stove); }
-    var ring = put(new T.TorusGeometry(0.19, 0.006, 8, 40), iron, BURNER.x, BURNER.y + LIFT + 0.005, BURNER.z, stove); ring.rotation.x = Math.PI / 2;
+    var LIFT = 0.13;                                            // the pan rests this far above the burner on the hob's own pan-support fins, leaving the flame in view
+    for (i = 0; i < 4; i++) { var ta = i * Math.PI / 2 + Math.PI / 4, fin = rbox(0.07, LIFT, 0.009, 0.003, iron, BURNER.x + Math.cos(ta) * 0.175, BURNER.y + LIFT / 2, BURNER.z + Math.sin(ta) * 0.175, stove); fin.rotation.y = -ta; }
     var pan = group(burner.x, burner.y + 0.035 + LIFT, burner.z, scene, 'pan');
     tube(0.22, 0.17, 0.06, iron, 0, 0, 0, pan); tube(0.2, 0.2, 0.006, std(0x2a2b2f, 0.45, 0.2), 0, 0.028, 0, pan);
     var handle = rbox(0.32, 0.026, 0.05, 0.012, iron, 0.33, 0.03, 0.12, pan); handle.rotation.y = -0.35;
