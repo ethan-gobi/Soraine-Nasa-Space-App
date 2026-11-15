@@ -88,6 +88,25 @@
     $('lab-ratio').textContent = s.g > 0 ? (s.g / G_EARTH).toFixed(2) + ' g' : 'about 0 g';
     fallText(); paint();
     Array.prototype.forEach.call(document.querySelectorAll('.worlds button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-world') === stop)); });
+    var card = $('detail-card');                                // Tony's detail page: what the flame is doing in this world, each fact with its source label
+    if (card) {
+      card.innerHTML = ''; var h = document.createElement('h2'); h.textContent = s.label; card.appendChild(h);
+      var lead = document.createElement('p'); lead.className = 'muted'; lead.textContent = 'What the flame is doing under ' + (s.g === 0 ? 'microgravity' : s.g.toFixed(2) + ' m/s\u00B2') + '.'; card.appendChild(lead);
+      var dl = document.createElement('dl');
+      s.facts.forEach(function (fc) { var dt = document.createElement('dt'), dd = document.createElement('dd'), sm = document.createElement('small'); dt.textContent = fc.k + ' '; sm.textContent = tag(fc.src); sm.className = fc.src === 'schematic' || fc.src === 'unverified' ? 'src warn' : 'src'; dt.appendChild(sm); dd.textContent = fc.v; dl.appendChild(dt); dl.appendChild(dd); });
+      card.appendChild(dl);
+      var note = document.createElement('p'); note.className = 'muted'; note.textContent = 'Evidence case and material comparison (Mylar G vs Ultem 1000) to be wired in here.'; card.appendChild(note);
+    }
+  }
+
+  // ---- Tony's pages: observe (the scene), detail (close on the pan, facts card), about ----
+  var page = 'observe', ORDER = ['observe', 'detail', 'about'];
+  function setPage(pg) {
+    if (ORDER.indexOf(pg) < 0 || !window.SoraineScene) return; page = pg;
+    var stage = $('stage'); stage.classList.toggle('is-detail', pg === 'detail'); stage.classList.toggle('is-about', pg === 'about');
+    $('detail-card').hidden = pg !== 'detail'; $('about-card').hidden = pg !== 'about';
+    SoraineScene.setRig(pg === 'observe' ? null : pg);
+    Array.prototype.forEach.call(document.querySelectorAll('.pages button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-page') === pg)); });
   }
   function setWorld(id) {
     stop = id; var s = scenario(id); if (s) { target.height = s.flame.height; target.width = s.flame.width; target.flicker = s.flame.flicker; }
@@ -107,9 +126,17 @@
     $('lab-ignite').addEventListener('click', ignite);
     $('lab-drop').addEventListener('click', startDrop);
     $('lab-egg-reset').addEventListener('click', function () { cooked = 0; paint(); });
-    Array.prototype.forEach.call(document.querySelectorAll('.worlds button'), function (b) { b.addEventListener('click', function () { if (window.Soraine) window.Soraine.goTo(b.getAttribute('data-world')); }); });
+    Array.prototype.forEach.call(document.querySelectorAll('.worlds button'), function (b) {
+      var sc = scenario(b.getAttribute('data-world')); if (sc) { var sm = document.createElement('small'); sm.textContent = sc.g.toFixed(2) + ' m/s\u00B2'; b.appendChild(sm); }   // each world with its gravity, as in Tony's bar
+      b.addEventListener('click', function () { if (window.Soraine) window.Soraine.goTo(b.getAttribute('data-world')); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.pages button'), function (b) { b.addEventListener('click', function () { setPage(b.getAttribute('data-page')); }); });
+    window.addEventListener('keydown', function (e) {             // left and right arrows step through the pages (not while a close shot is open)
+      if ($('stage').classList.contains('is-inspect') || /input|textarea/i.test(e.target.tagName)) return; var i = ORDER.indexOf(page);
+      if (e.key === 'ArrowRight') setPage(ORDER[(i + 1) % 3]); if (e.key === 'ArrowLeft') setPage(ORDER[(i + 2) % 3]);
+    });
     if (window.matchMedia('(max-width: 760px)').matches) $('lab').removeAttribute('open');
     setValve(1);
   }
-  window.SoraineLab = { world: function () { return stop; }, g: function () { return K.g(stop); }, setValve: setValve, ignite: ignite, drop: startDrop, resetEgg: function () { cooked = 0; paint(); } };
+  window.SoraineLab = { page: function () { return page; }, setPage: setPage, world: function () { return stop; }, g: function () { return K.g(stop); }, setValve: setValve, ignite: ignite, drop: startDrop, resetEgg: function () { cooked = 0; paint(); } };
 })();

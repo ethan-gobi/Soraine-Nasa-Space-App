@@ -33,6 +33,7 @@
     onFrame: function (fn) { hooks.push(fn); },                // fn(t, { free, still, focus, state })
     group: function (id) { return groups[id]; }
   };
+  var rig = null, dof = 0, dofGoal = 0;                           // Tony's page views: a named camera rig, and depth-of-field blur for the detail page
   var top = true;                                               // the top-down view over the pan (the opening shot)
   // Tony's scan wave: see scanCapture / scanFire below
   var wave = { active: false, t: 0, R: -1, v0: 4, accel: 44, cubic: 120, maxR: 220, swept: false, tSweep: 0 }, rt = null, oldCanvas = null, oldTex = null, quad = null, qScene = null, qCam = null, waveDone = null, bufSize = new T.Vector2();
@@ -91,6 +92,8 @@
       goalPos.set(focusCenter.x + orb.cd * Math.sin(orb.cph) * Math.sin(orb.cth), focusCenter.y + orb.cd * Math.cos(orb.cph), focusCenter.z + orb.cd * Math.sin(orb.cph) * Math.cos(orb.cth));
       camPos.copy(goalPos);
     }
+    else if (rig === 'detail') { goalPos.copy(E.burner).add(tmp.set(0.37, 0.26, 0.55)); goalLook.copy(E.burner); sway *= 0.4; }   // close on the pan (Tony's detail page)
+    else if (rig === 'about') { goalPos.set(-1.6, 1.5, 1.9); goalLook.set(0.9, 0.8, -1.8); sway *= 0.4; }                         // stepped back to one side (Tony's about page)
     else if (top) { goalPos.copy(E.burner).add(tmp.set(0, 1.08, 0.03)); goalLook.copy(E.burner); sway = 0; }   // straight down on the pan
     else overview();
     var ease = still ? 1 : 1 - Math.exp(-dt * (view === 'inspect' ? 5 : 2.2));
@@ -110,7 +113,8 @@
     if (sc.update && !focus) sc.update(E, t, still);
 
     if (shadowDirty > 0 || (k > 0.002 && k < 0.998) || (sc.liveShadows && !focus)) { renderer.shadowMap.needsUpdate = true; shadowDirty--; }   // shadows only redraw when something moved
-    if (wave.active) renderWave(dt, t); else renderer.render(scene, camera);
+    dof += ((focus ? 0 : dofGoal) - dof) * (still ? 1 : 1 - Math.exp(-dt * 3));
+    if (wave.active || dof > 0.01) renderWave(dt, t); else renderer.render(scene, camera);
   }
 
   /* Tony's scan wave (kitchen/wave.js in his repository), in the structure he describes: world position from depth ->
@@ -124,23 +128,27 @@
     quad = new T.Mesh(new T.PlaneGeometry(2, 2), new T.ShaderMaterial({ depthTest: false, depthWrite: false,
       uniforms: { tDiffuse: { value: rt.texture }, tDepth: { value: rt.depthTexture }, tOld: { value: oldTex }, uInvProj: { value: new T.Matrix4() }, uCamWorld: { value: new T.Matrix4() }, uNear: { value: 0.1 }, uFar: { value: 600 },
         uCenter: { value: new T.Vector3() }, uRadius: { value: -1 }, uTrail: { value: 4 }, uSpacing: { value: 0.35 }, uStrength: { value: 0 }, uLine: { value: new T.Color(0.45, 0.82, 1.0) }, uFront: { value: new T.Color(1, 1, 1) },
-        uTexel: { value: new T.Vector2() }, uShake: { value: new T.Vector2() } },
+        uTexel: { value: new T.Vector2() }, uShake: { value: new T.Vector2() }, uFocus: { value: 1 }, uDof: { value: 0 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
       fragmentShader: [
         'uniform sampler2D tDiffuse, tDepth, tOld; uniform mat4 uInvProj, uCamWorld; uniform vec3 uCenter, uLine, uFront;',
-        'uniform float uNear, uFar, uRadius, uTrail, uSpacing, uStrength; uniform vec2 uTexel, uShake; varying vec2 vUv;',
+        'uniform float uNear, uFar, uRadius, uTrail, uSpacing, uStrength, uFocus, uDof; uniform vec2 uTexel, uShake; varying vec2 vUv;',
         'float linDepth(float d){ float z = d*2.-1.; return (2.*uNear*uFar)/(uFar+uNear-z*(uFar-uNear)); }',
         'vec3 worldPos(vec2 uv, float d){ vec4 ndc = vec4(uv*2.-1., d*2.-1., 1.); vec4 v = uInvProj*ndc; v/=v.w; return (uCamWorld*v).xyz; }',
         'void main(){',
         '  vec2 uv = vUv + uShake;',
         '  float d = texture2D(tDepth, uv).x; bool sky = d > 0.99999;',
         '  float dist = distance(worldPos(uv, d), uCenter), behind = uRadius - dist;',
-        '  vec3 fresh = texture2D(tDiffuse, uv).rgb;',
+        '  vec3 fresh;                                                                    // depth of field for the detail page (Tony: 12 taps on a spiral)',
+        '  float coc = uDof * clamp(abs(linDepth(d) - uFocus) / max(uFocus, 0.2), 0., 1.);',
+        '  if (coc > 0.002) { fresh = vec3(0.); float rr = coc * 9.0;',
+        '    for (int i = 0; i < 12; i++) { float a = float(i) * 2.399963; float r = sqrt(float(i) + 0.5) / sqrt(12.); fresh += texture2D(tDiffuse, uv + vec2(cos(a), sin(a)) * r * rr * uTexel).rgb; }',
+        '    fresh /= 12.; } else fresh = texture2D(tDiffuse, uv).rgb;',
         '  #ifdef TONE_MAPPING',
         '    fresh = toneMapping(fresh);',
         '  #endif',
         '  fresh = linearToOutputTexel(vec4(fresh, 1.)).rgb;',
-        '  float shown = sky ? smoothstep(20., 110., uRadius) : step(0., behind);        // sky has no distance: it crossfades as the front runs out',
+        '  float shown = uRadius < 0. ? 1. : (sky ? smoothstep(20., 110., uRadius) : step(0., behind));   // sky has no distance: it crossfades as the front runs out',
         '  vec3 col = mix(texture2D(tOld, uv).rgb, fresh, shown);',
         '  if (uRadius > 0. && !sky && uStrength > 0.) {',
         '    float fw = max(fwidth(behind), 1e-4);',
@@ -161,17 +169,23 @@
   }
   function sizeWave() { if (!rt) return; renderer.getDrawingBufferSize(bufSize); rt.setSize(bufSize.x, bufSize.y); }
   function renderWave(dt, t) {
-    wave.t += dt;
-    wave.R = wave.v0 * wave.t + 0.5 * wave.accel * wave.t * wave.t + wave.cubic * Math.pow(Math.max(0, wave.t - 1), 3);   // Tony's front: slow off the hob, then racing to the horizon
-    var dCam = camera.position.distanceTo(E.burner), u = quad.material.uniforms, gap = wave.R - dCam;
-    if (!wave.swept && gap >= 0) { wave.swept = true; wave.tSweep = wave.t; }
-    var amp = (Math.exp(-(gap * gap) / 0.6) + (wave.swept ? Math.exp(-(wave.t - wave.tSweep) / 0.35) * 0.45 : 0)) / (1 + dCam * 0.35) * 0.03;   // a jolt as the front crosses the camera, then a short rumble
+    if (!rt) { try { initWave(); } catch (e) { wave.active = false; dof = dofGoal = 0; renderer.render(scene, camera); return; } }
+    var u = quad.material.uniforms, amp = 0;
+    renderer.getDrawingBufferSize(bufSize); if (rt.width !== bufSize.x || rt.height !== bufSize.y) rt.setSize(bufSize.x, bufSize.y);
+    if (wave.active) {
+      wave.t += dt;
+      wave.R = wave.v0 * wave.t + 0.5 * wave.accel * wave.t * wave.t + wave.cubic * Math.pow(Math.max(0, wave.t - 1), 3);   // Tony's front: slow off the hob, then racing to the horizon
+      var dCam = camera.position.distanceTo(E.burner), gap = wave.R - dCam;
+      if (!wave.swept && gap >= 0) { wave.swept = true; wave.tSweep = wave.t; }
+      amp = (Math.exp(-(gap * gap) / 0.6) + (wave.swept ? Math.exp(-(wave.t - wave.tSweep) / 0.35) * 0.45 : 0)) / (1 + dCam * 0.35) * 0.03;   // a jolt as the front crosses the camera, then a short rumble
+    }
     u.uShake.value.set(Math.sin(t * 43 + 1.3) * Math.sin(t * 15.9 + 2.2) * amp * 0.5, Math.sin(t * 37 + 4.1) * Math.sin(t * 13.7 + 7) * amp * 0.35);
     camera.updateMatrixWorld(); u.uInvProj.value.copy(camera.projectionMatrixInverse); u.uCamWorld.value.copy(camera.matrixWorld); u.uNear.value = camera.near; u.uFar.value = camera.far;
-    u.uCenter.value.copy(E.burner); u.uRadius.value = wave.R; u.uTrail.value = Math.min(0.6 + wave.R * 0.3, 16 + wave.R * 0.03);
-    u.uStrength.value = 1 - Math.min(1, Math.max(0, (wave.R - wave.maxR * 0.55) / (wave.maxR * 0.45))); u.uTexel.value.set(1 / bufSize.x, 1 / bufSize.y);
+    u.uCenter.value.copy(E.burner); u.uRadius.value = wave.active ? wave.R : -1; u.uTrail.value = Math.min(0.6 + Math.max(wave.R, 0) * 0.3, 16 + Math.max(wave.R, 0) * 0.03);
+    u.uStrength.value = wave.active ? 1 - Math.min(1, Math.max(0, (wave.R - wave.maxR * 0.55) / (wave.maxR * 0.45))) : 0; u.uTexel.value.set(1 / bufSize.x, 1 / bufSize.y);
+    u.uDof.value = dof; u.uFocus.value = camera.position.distanceTo(E.burner);
     renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(null); renderer.render(qScene, qCam);
-    if (wave.R > wave.maxR) { wave.active = false; wave.R = -1; shadowDirty = 4; var cb = waveDone; waveDone = null; if (cb) cb(); }
+    if (wave.active && wave.R > wave.maxR) { wave.active = false; wave.R = -1; shadowDirty = 4; var cb = waveDone; waveDone = null; if (cb) cb(); }
   }
   function loop(now) { draw(now); requestAnimationFrame(loop); }
 
@@ -221,18 +235,20 @@
     setState: setState,
     /* the top-down view over the pan: on or off */
     topView: function (on) { top = !!on; return top; },
+    /* Tony's page views: 'detail' (close on the pan, background blurred), 'about' (stepped back), or null for the scene's own view */
+    setRig: function (name) { rig = name || null; dofGoal = rig === 'detail' ? 1 : 0; },
     isTop: function () { return top; },
     /* Scan transition, step 1: keep a picture of the world as it is now. Call before changing scene. */
     scanCapture: function () {
       try {
         if (!rt) initWave(); sizeWave(); draw(performance.now());
-        oldCanvas.width = renderer.domElement.width; oldCanvas.height = renderer.domElement.height; oldCanvas.getContext('2d').drawImage(renderer.domElement, 0, 0); oldTex.needsUpdate = true; return true;
+        if (oldCanvas.width !== renderer.domElement.width || oldCanvas.height !== renderer.domElement.height || !oldTex.userData.sized) { oldTex.dispose(); oldCanvas.width = renderer.domElement.width; oldCanvas.height = renderer.domElement.height; oldTex.userData.sized = true; }   // a texture keeps its first size: start a new one when the picture's size changes
+        oldCanvas.getContext('2d').drawImage(renderer.domElement, 0, 0); oldTex.needsUpdate = true; return true;
       } catch (e) { if (window.console) console.warn(e); return false; }
     },
     /* Scan transition, step 2: after the scene has changed, send the front out from the stove flame. done() runs when it has passed. */
     scanFire: function (done) {
-      overview(); if (top) { goalPos.copy(E.burner).add(tmp.set(0, 1.08, 0.03)); goalLook.copy(E.burner); }
-      camPos.copy(goalPos); camLook.copy(goalLook);
+      if (!rig) { overview(); if (top) { goalPos.copy(E.burner).add(tmp.set(0, 1.08, 0.03)); goalLook.copy(E.burner); } camPos.copy(goalPos); camLook.copy(goalLook); }
       wave.active = true; wave.t = 0; wave.R = 0.001; wave.swept = false; waveDone = done || null;
     },
     scenes: function () { return Object.keys(K.scenes); },

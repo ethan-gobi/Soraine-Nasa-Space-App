@@ -76,3 +76,9 @@ Only the kitchen is built when the page opens. The Moon and Mars are built quiet
 - The page opens looking straight down on the pan (Tony's landing view). "Begin the journey" pulls back to the scene. "Top view of the pan" in the readout card, or the T key, switches back and forth in any world.
 - Changing world uses Tony's scan wave (`kitchen/wave.js`), ported into `js/engine.js` (`initWave`, `renderWave`, `scanCapture`, `scanFire`): a front runs out from the stove flame with a white leading line, trailing scan lines, a glow and object outlines, and a camera jolt as it passes. Pixels the front has passed show the new world; the rest still show the old one. The loose props are kicked by the same front.
 - With reduced motion on, or if the browser lacks depth textures, the older wipe is used instead.
+
+## Tony's page views
+
+- Observe / Detail / About buttons at the bottom (left and right arrow keys also step through them). Detail moves the camera close on the pan with the background blurred and shows the current world's facts with their source labels. About steps back and explains the project.
+- Code: `setPage` in `js/physics.js`; camera rigs and the blur in `js/engine.js` (`setRig`, `renderWave`).
+- World buttons show each world's gravity from `js/physics-data.js`.

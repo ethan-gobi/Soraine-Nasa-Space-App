@@ -29,6 +29,22 @@
       <button type="button" data-world="orbit" aria-pressed="false">ISS</button>
     </nav>
 
+    <nav id="pages" class="pages" aria-label="Views">
+      <button type="button" data-page="observe" aria-pressed="true">Observe</button>
+      <button type="button" data-page="detail" aria-pressed="false">Detail</button>
+      <button type="button" data-page="about" aria-pressed="false">About</button>
+    </nav>
+
+    <article id="detail-card" class="card" hidden></article>
+
+    <article id="about-card" class="card" hidden>
+      <h2>About</h2>
+      <p>The same stove, pan and egg in four places: a kitchen on Earth, the Moon, Mars and the ISS. Between them, the only thing that changes the physics is gravity.</p>
+      <p>Each change of world pulses a wave out from the flame. What the wave has passed is already living under the new gravity; what it has not reached is still under the old one. The closer the wavefront is to you, the harder the camera shakes.</p>
+      <p class="muted">Flame shapes here are schematic: height and width follow a simple buoyancy heuristic, not a combustion model. Figures in the detail view are labelled with their source or marked unverified.</p>
+      <p class="muted">Team Soraine, NASA Space Apps 2026. Gravity data, scan wave and loose-prop physics by Tony. The 3D scenes are stylised, not to scale, and were built in code with AI assistance (see the AI log in the project).</p>
+    </article>
+
     <details id="lab" class="lab" open>
       <summary>Stove readout: <span id="lab-world">Earth</span></summary>
       <dl id="lab-facts" class="facts"></dl>

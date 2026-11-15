@@ -108,3 +108,20 @@ button.face:focus-visible { outline: 2px solid #5aa8ff; outline-offset: -4px; }
 .fall { font-variant-numeric: tabular-nums; }
 .is-inspect .lab, .is-inspect .worlds, .is-cut .lab { display: none; }
 @media (max-width: 760px) { .worlds { left: auto; right: max(var(--pad), env(safe-area-inset-right)); transform: none; } .worlds button { padding: 8px 10px; } .lab { top: calc(max(var(--pad), env(safe-area-inset-top)) + 52px); max-height: 46vh; } }
+
+/* ---- Tony's page views: observe / detail / about ---- */
+.pages { position: absolute; left: 50%; bottom: max(var(--pad), env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 2px; background: rgba(10,10,12,.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 3px; }
+.pages button { font: inherit; font-size: 13px; letter-spacing: .08em; color: var(--ink); background: transparent; border: 0; padding: 7px 14px; min-height: 36px; cursor: pointer; }
+.pages button[aria-pressed="true"] { background: var(--ink); color: #000; }
+.pages button:focus-visible { outline: 2px solid #5aa8ff; outline-offset: 2px; }
+.card { position: absolute; left: max(var(--pad), env(safe-area-inset-left)); top: 50%; transform: translateY(-50%); width: min(26rem, 86vw); max-height: 70vh; overflow: auto; background: rgba(10,10,12,.6); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 20px 22px; line-height: 1.5; }
+.card h2 { margin: 0 0 8px; font-size: 26px; font-weight: 600; }
+.card p { margin: 0 0 10px; max-width: 60ch; }
+.card .muted { color: var(--dim); font-size: 14px; }
+.card dl { display: grid; grid-template-columns: 1fr; gap: 2px; margin: 12px 0; }
+.card dt { color: var(--dim); font-size: 13px; margin-top: 8px; }
+.card dd { margin: 0; font-size: 17px; }
+.worlds button small { display: block; font-size: 10px; letter-spacing: .02em; opacity: .75; font-weight: 400; margin-top: 1px; }
+.is-detail .hero, .is-about .hero, .is-detail .lab, .is-about .lab, .is-detail .corner, .is-about .corner { display: none; }
+.is-inspect .pages, .is-inspect .card, .is-cut .card { display: none; }
+@media (max-width: 760px) { .card { top: auto; bottom: 64px; transform: none; max-height: 46vh; } }
