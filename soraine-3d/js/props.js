@@ -61,7 +61,7 @@
 
     flameHalo = halo(0x4a8cff, 0.5, burner.x, burner.y + 0.02, burner.z, scene, 0.7);
     burnerWorld.copy(burner);
-    E.parts.jets = flameJets; E.parts.light = flameLight; E.parts.halo = flameHalo;
+    E.parts.jets = flameJets; E.parts.light = flameLight; E.parts.halo = flameHalo; E.parts.ball = flameBall;
 
     // ---- gas canister: this is a gas stove, so here is its fuel ----
     var canister = group(-0.29, 0, -1.78, scene, 'canister');

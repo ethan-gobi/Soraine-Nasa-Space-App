@@ -20,7 +20,7 @@
 (function () {
   var T = THREE, K = SoraineKit, objects = K.objects, floaters = K.floaters;
   var renderer, scene, camera, state = null, still = false, k = 0, lastT = 0, freeStart = 0;
-  var shadowDirty = 4, ratio = 1.5, frames = 0, slow = 0;
+  var LITE = /[?&]lite\b/.test(location.search), shadowDirty = 4, ratio = LITE ? 1 : 1.5, frames = 0, slow = 0;
   var groups = {}, built = {}, hooks = [], lineMat, inspectKey, pickRoots = [];
   var view = 'intro', introUntil = 0, focus = null, saved = [], focusCenter = new T.Vector3(), tmp = new T.Vector3();
   var goalPos = new T.Vector3(), goalLook = new T.Vector3(), camPos = new T.Vector3(), camLook = new T.Vector3();
@@ -128,11 +128,11 @@
     quad = new T.Mesh(new T.PlaneGeometry(2, 2), new T.ShaderMaterial({ depthTest: false, depthWrite: false,
       uniforms: { tDiffuse: { value: rt.texture }, tDepth: { value: rt.depthTexture }, tOld: { value: oldTex }, uInvProj: { value: new T.Matrix4() }, uCamWorld: { value: new T.Matrix4() }, uNear: { value: 0.1 }, uFar: { value: 600 },
         uCenter: { value: new T.Vector3() }, uRadius: { value: -1 }, uTrail: { value: 4 }, uSpacing: { value: 0.35 }, uStrength: { value: 0 }, uLine: { value: new T.Color(0.45, 0.82, 1.0) }, uFront: { value: new T.Color(1, 1, 1) },
-        uTexel: { value: new T.Vector2() }, uShake: { value: new T.Vector2() }, uFocus: { value: 1 }, uDof: { value: 0 } },
+        uTexel: { value: new T.Vector2() }, uShake: { value: new T.Vector2() }, uFocus: { value: 1 }, uDof: { value: 0 }, uSkyK: { value: 1 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
       fragmentShader: [
         'uniform sampler2D tDiffuse, tDepth, tOld; uniform mat4 uInvProj, uCamWorld; uniform vec3 uCenter, uLine, uFront;',
-        'uniform float uNear, uFar, uRadius, uTrail, uSpacing, uStrength, uFocus, uDof; uniform vec2 uTexel, uShake; varying vec2 vUv;',
+        'uniform float uNear, uFar, uRadius, uTrail, uSpacing, uStrength, uFocus, uDof, uSkyK; uniform vec2 uTexel, uShake; varying vec2 vUv;',
         'float linDepth(float d){ float z = d*2.-1.; return (2.*uNear*uFar)/(uFar+uNear-z*(uFar-uNear)); }',
         'vec3 worldPos(vec2 uv, float d){ vec4 ndc = vec4(uv*2.-1., d*2.-1., 1.); vec4 v = uInvProj*ndc; v/=v.w; return (uCamWorld*v).xyz; }',
         'void main(){',
@@ -148,7 +148,9 @@
         '    fresh = toneMapping(fresh);',
         '  #endif',
         '  fresh = linearToOutputTexel(vec4(fresh, 1.)).rgb;',
-        '  float shown = uRadius < 0. ? 1. : (sky ? smoothstep(20., 110., uRadius) : step(0., behind));   // sky has no distance: it crossfades as the front runs out',
+        '  float up = clamp(normalize(worldPos(uv, 1.) - uCamWorld[3].xyz).y, 0., 1.);    // how high in the sky this pixel looks',
+        '  float skyShown = smoothstep(0., 1., clamp(uSkyK * 1.6 - up * 0.6, 0., 1.));     // Tony: the horizon changes first, the zenith last',
+        '  float shown = uRadius < 0. ? 1. : (sky ? skyShown : step(0., behind));',
         '  vec3 col = mix(texture2D(tOld, uv).rgb, fresh, shown);',
         '  if (uRadius > 0. && !sky && uStrength > 0.) {',
         '    float fw = max(fwidth(behind), 1e-4);',
@@ -181,7 +183,8 @@
     }
     u.uShake.value.set(Math.sin(t * 43 + 1.3) * Math.sin(t * 15.9 + 2.2) * amp * 0.5, Math.sin(t * 37 + 4.1) * Math.sin(t * 13.7 + 7) * amp * 0.35);
     camera.updateMatrixWorld(); u.uInvProj.value.copy(camera.projectionMatrixInverse); u.uCamWorld.value.copy(camera.matrixWorld); u.uNear.value = camera.near; u.uFar.value = camera.far;
-    u.uCenter.value.copy(E.burner); u.uRadius.value = wave.active ? wave.R : -1; u.uTrail.value = Math.min(0.6 + Math.max(wave.R, 0) * 0.3, 16 + Math.max(wave.R, 0) * 0.03);
+    u.uCenter.value.copy(E.burner); u.uRadius.value = wave.active ? wave.R : -1; u.uTrail.value = Math.min(0.6 + Math.max(wave.R, 0) * 0.3, 16 + Math.max(wave.R, 0) * 0.03); u.uSpacing.value = 0.25 + Math.max(wave.R, 0) * 0.045;   // lines ride with the front, so their spacing can grow
+    u.uSkyK.value = wave.active ? Math.min(1, Math.max(0, (wave.R - camera.position.distanceTo(E.burner) * 0.6) / 60)) : 1;
     u.uStrength.value = wave.active ? 1 - Math.min(1, Math.max(0, (wave.R - wave.maxR * 0.55) / (wave.maxR * 0.45))) : 0; u.uTexel.value.set(1 / bufSize.x, 1 / bufSize.y);
     u.uDof.value = dof; u.uFocus.value = camera.position.distanceTo(E.burner);
     renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(null); renderer.render(qScene, qCam);
@@ -220,7 +223,7 @@
     init: function (canvas, first) {
       renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
       renderer.outputEncoding = T.sRGBEncoding; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
-      renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false;
+      renderer.shadowMap.enabled = !LITE; renderer.shadowMap.type = T.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false;   // add ?lite to the address for slow machines: no shadows, lower resolution
       E.renderer = renderer;
       build(first || Object.keys(K.scenes)[0]); setState(first || Object.keys(K.scenes)[0]);
       setTimeout(prebuild, 3500);
@@ -233,6 +236,7 @@
       requestAnimationFrame(loop);
     },
     setState: setState,
+    camera: function () { return camera; },
     /* the top-down view over the pan: on or off */
     topView: function (on) { top = !!on; return top; },
     /* Tony's page views: 'detail' (close on the pan, background blurred), 'about' (stepped back), or null for the scene's own view */

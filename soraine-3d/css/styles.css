@@ -125,3 +125,6 @@ button.face:focus-visible { outline: 2px solid #5aa8ff; outline-offset: -4px; }
 .is-detail .hero, .is-about .hero, .is-detail .lab, .is-about .lab, .is-detail .corner, .is-about .corner { display: none; }
 .is-inspect .pages, .is-inspect .card, .is-cut .card { display: none; }
 @media (max-width: 760px) { .card { top: auto; bottom: 64px; transform: none; max-height: 46vh; } }
+
+/* dragging in the scene should never select the page text */
+.stage { -webkit-user-select: none; user-select: none; }

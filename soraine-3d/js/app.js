@@ -7,7 +7,7 @@
   var C = window.SORAINE_CONTENT, STOPS = C.STOPS, INFO = C.INFO, NOTE = C.NOTE;   // all text lives in content.js
 
   var $ = function (id) { return document.getElementById(id); };
-  var stage = $('stage'), canvas = $('scene'), wipe = $('wipe'), ring = $('ring'), current = C.first, busy = false, inspecting = false;
+  var stage = $('stage'), canvas = $('scene'), wipe = $('wipe'), ring = $('ring'), current = C.first, busy = false, inspecting = false, queued = null;
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   function show(id) {
@@ -23,10 +23,11 @@
   /* The scan: freeze the old scene as a picture, switch the live scene underneath,
      then open a growing circle in the picture, centred on the sun. */
   function goTo(id) {
+    if (busy && STOPS[id]) { queued = id; return false; }       // a world picked while the scan is still running goes next
     if (!STOPS[id] || busy || inspecting || id === current) return false;
     if (!reduced.matches && SoraineScene.scanCapture()) {       // Tony's scan: a front runs out from the stove flame and uncovers the new world
       busy = true; stage.classList.add('is-cut'); show(id);
-      SoraineScene.scanFire(function () { stage.classList.remove('is-cut'); busy = false; $('go').focus({ preventScroll: true }); });
+      SoraineScene.scanFire(function () { stage.classList.remove('is-cut'); busy = false; $('go').focus({ preventScroll: true }); if (queued && queued !== current) { var q = queued; queued = null; goTo(q); } queued = null; });
       return true;
     }
     busy = true; stage.classList.add('is-cut');                 // fallback (reduced motion, or no depth textures): the older wipe from the sun

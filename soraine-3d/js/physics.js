@@ -17,7 +17,7 @@
   function scenario(stop) { var slug = MAP[stop] || stop; for (var i = 0; i < DATA.length; i++) if (DATA[i].slug === slug) return DATA[i]; return null; }
   K.g = function (stop) { var s = scenario(stop); return s ? s.g : G_EARTH; };
 
-  var stop = 'earth', valve = 1, flare = 0, cooked = 0, fl = { height: 1, width: 1, flicker: 1 }, target = { height: 1, width: 1, flicker: 1 };
+  var stop = 'earth', valve = 1, flare = 0, cooked = 0, fl = { height: 1, width: 1, flicker: 1, blue: 0, sphere: 0 }, target = { height: 1, width: 1, flicker: 1, blue: 0, sphere: 0 }, baseLight = null, blueLight = new T.Color(0.45, 0.6, 1);
   var drop = null, spoon, puffs = [], last = 0, parts, burner, $ = function (id) { return document.getElementById(id); };
 
   K.props.push(function (E) {
@@ -39,6 +39,10 @@
         if (!on) parts.jets.visible = false;
         parts.jets.scale.set(fl.width * (0.8 + 0.2 * size) * (1 + 0.25 * flare), Math.max(0.01, fl.height * size * burst * (1 + jit)), fl.width * (0.8 + 0.2 * size) * (1 + 0.25 * flare));
       }
+      // Tony's cone-to-sphere morph and blue shift: as buoyancy weakens the flame rounds off and its light turns bluer
+      if (parts.jets && fl.sphere > 0.01 && !f.free) { parts.jets.scale.y *= 1 - 0.5 * fl.sphere; parts.jets.scale.x *= 1 + 0.3 * fl.sphere; parts.jets.scale.z *= 1 + 0.3 * fl.sphere; }
+      if (parts.ball && !f.free && !f.focus) { var sp = on ? Math.max(0, fl.sphere - 0.05) : 0; parts.ball.visible = sp > 0.01; if (sp > 0.01) parts.ball.scale.setScalar(0.25 + 0.6 * sp * size); }
+      if (parts.light) { if (!baseLight) baseLight = parts.light.color.clone(); parts.light.color.copy(baseLight).lerp(blueLight, fl.blue * 0.6); }
       if (parts.light) parts.light.intensity *= (on ? size * burst : 0);
       if (parts.halo) { parts.halo.material.opacity *= (on ? 0.3 + 0.7 * size : 0); parts.halo.scale.setScalar(0.5 * (0.6 + 0.4 * size) * fl.width * (1 + 0.6 * flare)); }
 
@@ -109,7 +113,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('.pages button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-page') === pg)); });
   }
   function setWorld(id) {
-    stop = id; var s = scenario(id); if (s) { target.height = s.flame.height; target.width = s.flame.width; target.flicker = s.flame.flicker; }
+    stop = id; var s = scenario(id); if (s) { target.height = s.flame.height; target.width = s.flame.width; target.flicker = s.flame.flicker; target.blue = s.flame.blue; target.sphere = s.flame.sphere; }
     if (drop) end(); render();
   }
   function setValve(v) { valve = Math.max(0, Math.min(1, v)); var r = $('lab-valve'), o = $('lab-valve-out'); if (r) r.value = Math.round(valve * 100); if (o) o.textContent = valve <= 0.02 ? 'closed' : Math.round(valve * 100) + '% open'; }
